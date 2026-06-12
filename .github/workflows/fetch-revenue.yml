@@ -1,0 +1,42 @@
+name: Fetch Monthly Revenue
+
+on:
+  # 台灣時間每月 12 日上午 09:00 = UTC 01:00
+  schedule:
+    - cron: "0 1 12 * *"
+  # 手動觸發備案
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch revenue data
+        run: python scripts/fetch_revenue.py
+
+      - name: Commit and push updated data
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/revenue.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            MONTH=$(python -c "import json; d=json.load(open('data/revenue.json')); print(d['report_month'])")
+            git commit -m "data: update revenue for ${MONTH}"
+            git push origin HEAD
+          fi

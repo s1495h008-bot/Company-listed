@@ -1,0 +1,16 @@
+[
+  { "code": "9921", "name_zh": "巨大",  "name_en": "Giant",    "market": "sii" },
+  { "code": "9914", "name_zh": "美利達", "name_en": "Merida",   "market": "sii" },
+  { "code": "8933", "name_zh": "愛地雅", "name_en": "Ideal",    "market": "otc" },
+  { "code": "6804", "name_zh": "亞獵士", "name_en": "Axman",    "market": "otc" },
+  { "code": "8163", "name_zh": "達方",  "name_en": "Darfon",   "market": "otc" },
+  { "code": "5306", "name_zh": "桂盟",  "name_en": "KMC",      "market": "sii" },
+  { "code": "1526", "name_zh": "日馳",  "name_en": "Sunrace",  "market": "sii" },
+  { "code": "1517", "name_zh": "利奇",  "name_en": "LeeChi",   "market": "sii" },
+  { "code": "4536", "name_zh": "拓凱",  "name_en": "Topkey",   "market": "sii" },
+  { "code": "2105", "name_zh": "正新",  "name_en": "Maxxis",   "market": "sii" },
+  { "code": "2106", "name_zh": "建大",  "name_en": "Kenda",    "market": "sii" },
+  { "code": "4559", "name_zh": "久裕",  "name_en": "JoyTech",  "market": "sii" },
+  { "code": "8938", "name_zh": "明安",  "name_en": "Advanced", "market": "otc" },
+  { "code": "5291", "name_zh": "邑昇",  "name_en": "EISO",     "market": "otc" }
+]

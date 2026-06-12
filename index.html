@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>自行車產業月營收報告</title>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --border: #dee2e6;
+    --header-bg: #1a1a2e;
+    --header-text: #e8e8f0;
+    --accent: #4361ee;
+    --accent-light: #eef0fd;
+    --pos: #2a9d4e;
+    --neg: #d63031;
+    --pos-bg: #eafaf1;
+    --neg-bg: #fdf0f0;
+    --neutral: #636e72;
+    --shadow: 0 2px 8px rgba(0,0,0,.08);
+    --radius: 8px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC",
+                 "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg);
+    color: #2d3436;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  header {
+    background: var(--header-bg);
+    color: var(--header-text);
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: .02em; }
+  #update-info { font-size: .78rem; opacity: .75; }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 24px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: var(--shadow);
+  }
+  .toolbar label { font-weight: 500; font-size: .85rem; }
+  .unit-btn {
+    padding: 5px 13px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: transparent;
+    cursor: pointer;
+    font-size: .8rem;
+    color: #636e72;
+    transition: all .15s;
+  }
+  .unit-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .btn {
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    font-size: .8rem;
+    transition: background .15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn:hover { background: var(--accent-light); border-color: var(--accent); }
+  .btn.copied { background: var(--pos-bg); border-color: var(--pos); color: var(--pos); }
+
+  main { padding: 20px 24px; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 28px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); }
+  thead tr { background: var(--header-bg); color: var(--header-text); }
+  thead th {
+    padding: 11px 14px;
+    text-align: right;
+    font-size: .78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    letter-spacing: .03em;
+  }
+  thead th:nth-child(1),
+  thead th:nth-child(2) { text-align: left; }
+  th.unit-label { font-weight: 400; opacity: .7; font-size: .72rem; }
+
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--accent-light); }
+  td {
+    padding: 10px 14px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  td:nth-child(1), td:nth-child(2) { text-align: left; }
+  td:nth-child(1) { font-family: monospace; font-size: .85rem; color: var(--neutral); }
+  td:nth-child(2) { font-weight: 600; }
+
+  .pct { font-weight: 600; }
+  .pct.pos { color: var(--pos); }
+  .pct.neg { color: var(--neg); }
+  .pct.zero { color: var(--neutral); }
+  .no-data { color: #b2bec3; font-style: italic; }
+
+  /* Summary section */
+  .section-title {
+    font-size: .95rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #summary-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    font-size: .83rem;
+    line-height: 1.8;
+    white-space: pre-line;
+    color: #2d3436;
+    box-shadow: var(--shadow);
+    margin-bottom: 6px;
+    min-height: 60px;
+  }
+  .error-note {
+    color: var(--neg);
+    background: var(--neg-bg);
+    border: 1px solid #fab1b1;
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: .83rem;
+  }
+  footer {
+    text-align: center;
+    padding: 18px;
+    font-size: .75rem;
+    color: #b2bec3;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>自行車產業月營收報告</h1>
+  <span id="update-info">載入中…</span>
+</header>
+
+<div class="toolbar">
+  <label>顯示單位：</label>
+  <button class="unit-btn active" data-unit="m" onclick="setUnit('m')">百萬元</button>
+  <button class="unit-btn" data-unit="k" onclick="setUnit('k')">仟元</button>
+  <button class="unit-btn" data-unit="1" onclick="setUnit('1')">元</button>
+
+  <button class="btn" id="copy-table-btn" onclick="copyTable()">
+    &#128203; 複製表格（Tab 分隔）
+  </button>
+</div>
+
+<main>
+  <div id="error-area"></div>
+
+  <div class="table-wrap">
+    <table id="revenue-table">
+      <thead>
+        <tr>
+          <th>代號</th>
+          <th>公司名稱</th>
+          <th>單月營收<br><span class="unit-label" id="th-unit1"></span></th>
+          <th>單月 YoY%</th>
+          <th>單月 MoM%</th>
+          <th>累計營收<br><span class="unit-label" id="th-unit2"></span></th>
+          <th>累計 YoY%</th>
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        <tr><td colspan="7" style="text-align:center;padding:30px;color:#b2bec3">載入中…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-title">
+    英文摘要
+    <button class="btn" id="copy-summary-btn" onclick="copySummary()">&#128203; 複製摘要</button>
+  </div>
+  <div id="summary-box">載入中…</div>
+</main>
+
+<footer>資料來源：台灣證券交易所 / 櫃買中心 OpenAPI &nbsp;|&nbsp; 單位：仟元（官方原始值）</footer>
+
+<script>
+// ─── state ───────────────────────────────────────────────────────────────────
+let DATA = null;       // raw JSON from data/revenue.json
+let UNIT = 'm';        // 'm'=百萬元  'k'=仟元  '1'=元
+
+// ─── unit helpers ────────────────────────────────────────────────────────────
+const UNIT_LABELS = { m: '百萬元', k: '仟元', '1': '元' };
+
+function convertFromK(val_k, unit) {
+  // Input is in 仟元 (thousands)
+  if (val_k == null) return null;
+  if (unit === 'm')  return val_k / 1000;   // → 百萬元
+  if (unit === 'k')  return val_k;           // keep 仟元
+  if (unit === '1')  return val_k * 1000;    // → 元
+  return val_k;
+}
+
+function fmtNum(val_k, unit) {
+  if (val_k == null) return '<span class="no-data">—</span>';
+  const v = convertFromK(val_k, unit);
+  if (unit === 'm') {
+    // Always 1 decimal for 百萬元
+    return v.toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  }
+  if (unit === 'k') {
+    return Math.round(v).toLocaleString('zh-TW');
+  }
+  // 元
+  return Math.round(v).toLocaleString('zh-TW');
+}
+
+function fmtNumPlain(val_k, unit) {
+  // Plain text version for clipboard
+  if (val_k == null) return '';
+  const v = convertFromK(val_k, unit);
+  if (unit === 'm') return v.toFixed(1);
+  return String(Math.round(v));
+}
+
+function fmtPct(pct, includeSign = true) {
+  if (pct == null) return { html: '<span class="no-data">—</span>', plain: '' };
+  const sign = pct >= 0 ? '+' : '';
+  const cls   = pct > 0.05 ? 'pos' : pct < -0.05 ? 'neg' : 'zero';
+  const text  = `${sign}${pct.toFixed(1)}%`;
+  return {
+    html:  `<span class="pct ${cls}">${text}</span>`,
+    plain: text,
+  };
+}
+
+// ─── render table ────────────────────────────────────────────────────────────
+function renderTable() {
+  if (!DATA) return;
+  const label = UNIT_LABELS[UNIT];
+  document.getElementById('th-unit1').textContent = label;
+  document.getElementById('th-unit2').textContent = label;
+
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+
+  for (const c of DATA.companies) {
+    const tr = document.createElement('tr');
+    if (c.error) {
+      tr.innerHTML = `
+        <td>${c.code}</td>
+        <td>${c.name_zh}</td>
+        <td colspan="5" class="no-data">無資料</td>`;
+    } else {
+      const mom = fmtPct(c.revenue_month_mom);
+      const yoy = fmtPct(c.revenue_month_yoy);
+      const cytd = fmtPct(c.revenue_ytd_yoy);
+      tr.innerHTML = `
+        <td>${c.code}</td>
+        <td>${c.name_zh}</td>
+        <td>${fmtNum(c.revenue_month, UNIT)}</td>
+        <td>${yoy.html}</td>
+        <td>${mom.html}</td>
+        <td>${fmtNum(c.revenue_ytd, UNIT)}</td>
+        <td>${cytd.html}</td>`;
+    }
+    tbody.appendChild(tr);
+  }
+}
+
+// ─── English summary ─────────────────────────────────────────────────────────
+const MONTH_NAMES = [
+  '', 'January','February','March','April','May','June',
+  'July','August','September','October','November','December'
+];
+const ORDINALS = [
+  '', 'One','Two','Three','Four','Five','Six',
+  'Seven','Eight','Nine','Ten','Eleven','Twelve'
+];
+
+function pctWord(pct) {
+  if (pct == null) return null;
+  const abs = Math.round(Math.abs(pct));
+  const dir = pct >= 0 ? 'up' : 'down';
+  return `${dir} ${abs}%`;
+}
+
+function buildSummary() {
+  if (!DATA) return '';
+  const [yearStr, monthStr] = DATA.report_month.split('-');
+  const month = parseInt(monthStr, 10);
+  const monthName = MONTH_NAMES[month] || '';
+  const monthCount = ORDINALS[month] || `${month}`;
+
+  const lines = [];
+  for (const c of DATA.companies) {
+    if (c.error || c.revenue_month == null) {
+      lines.push(`${c.name_en}: Data not available.`);
+      continue;
+    }
+    // Use 百萬元 for summary
+    const rev_m  = (c.revenue_month / 1000).toFixed(0);
+    const ytd_m  = (c.revenue_ytd   / 1000).toFixed(0);
+
+    const yoyStr  = pctWord(c.revenue_month_yoy);
+    const cytdStr = pctWord(c.revenue_ytd_yoy);
+
+    const yoyPart  = yoyStr  ? `, ${yoyStr} YoY`  : '';
+    const cytdPart = cytdStr ? `, ${cytdStr} YoY` : '';
+
+    const numMonths = parseInt(monthStr, 10);
+    const periodLabel = numMonths === 1
+      ? 'One-month'
+      : `${monthCount}-month`;
+
+    lines.push(
+      `${c.name_en}: ${monthName} revenue totaled NT$${Number(rev_m).toLocaleString('en-US')} million${yoyPart}. ` +
+      `${periodLabel} revenue reached NT$${Number(ytd_m).toLocaleString('en-US')} million${cytdPart}.`
+    );
+  }
+  return lines.join('\n');
+}
+
+// ─── copy handlers ───────────────────────────────────────────────────────────
+function copyTable() {
+  if (!DATA) return;
+  const header = ['代號','公司名稱',`單月營收(${UNIT_LABELS[UNIT]})`,'單月YoY%','單月MoM%',`累計營收(${UNIT_LABELS[UNIT]})`,'累計YoY%'];
+  const rows = [header];
+  for (const c of DATA.companies) {
+    if (c.error) {
+      rows.push([c.code, c.name_zh, '', '', '', '', '']);
+    } else {
+      rows.push([
+        c.code,
+        c.name_zh,
+        fmtNumPlain(c.revenue_month, UNIT),
+        fmtPct(c.revenue_month_yoy).plain,
+        fmtPct(c.revenue_month_mom).plain,
+        fmtNumPlain(c.revenue_ytd, UNIT),
+        fmtPct(c.revenue_ytd_yoy).plain,
+      ]);
+    }
+  }
+  const text = rows.map(r => r.join('\t')).join('\n');
+  copyText(text, 'copy-table-btn');
+}
+
+function copySummary() {
+  copyText(buildSummary(), 'copy-summary-btn');
+}
+
+function copyText(text, btnId) {
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById(btnId);
+    const orig = btn.textContent;
+    btn.classList.add('copied');
+    btn.textContent = '✓ 已複製';
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 2000);
+  });
+}
+
+// ─── unit switcher ───────────────────────────────────────────────────────────
+function setUnit(u) {
+  UNIT = u;
+  document.querySelectorAll('.unit-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.unit === u));
+  renderTable();
+}
+
+// ─── load data ───────────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const resp = await fetch('data/revenue.json?_=' + Date.now());
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    DATA = await resp.json();
+
+    // Update header
+    const dt = new Date(DATA.updated_at);
+    const twFmt = new Intl.DateTimeFormat('zh-TW', {
+      timeZone: 'Asia/Taipei',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+    const [ry, rm] = DATA.report_month.split('-');
+    document.getElementById('update-info').textContent =
+      `資料月份：${ry} 年 ${parseInt(rm)} 月　｜　更新時間：${twFmt.format(dt)}（台灣時間）`;
+
+    renderTable();
+    document.getElementById('summary-box').textContent = buildSummary();
+
+  } catch (err) {
+    document.getElementById('error-area').innerHTML =
+      `<div class="error-note">⚠ 無法載入資料：${err.message}。<br>` +
+      `請確認 GitHub Actions 已執行並生成 <code>data/revenue.json</code>，或手動觸發 workflow。</div>`;
+    document.getElementById('table-body').innerHTML =
+      '<tr><td colspan="7" style="text-align:center;padding:30px;color:#b2bec3">無資料</td></tr>';
+    document.getElementById('summary-box').textContent = '（無資料）';
+    document.getElementById('update-info').textContent = '資料尚未生成';
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>
