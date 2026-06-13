@@ -25,38 +25,66 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      # ── Debug: dump raw MOPS HTML so we can validate the parser ──────────
-      - name: Debug MOPS raw response (9921, sii, step=1)
+      # ── Debug: validate both OpenAPI endpoints ───────────────────────────
+      - name: Debug API responses (TWSE + TPEx)
         run: |
           python3 - <<'PYEOF'
-          import requests, sys
-          for host in ["https://mopsov.twse.com.tw", "https://mops.twse.com.tw"]:
-              url = host + "/mops/web/t05st10_ifrs"
-              headers = {
-                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                  "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                  "Referer": url,
-                  "Accept": "text/html,*/*",
-                  "Accept-Language": "zh-TW,zh;q=0.9",
-              }
-              # Individual query for 9921 (step=1)
-              body = "encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=sii&co_id=9921&year=115&season=05"
+          import requests, json, sys
+          from datetime import datetime, timezone, timedelta
+
+          TW_TZ = timezone(timedelta(hours=8))
+          now   = datetime.now(TW_TZ)
+          rev_m = now.month - 1 if now.month > 1 else 12
+          rev_y = now.year      if now.month > 1 else now.year - 1
+          roc_y = rev_y - 1911
+          yearmonth = f"{roc_y}{rev_m:02d}"
+          UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          hdrs = {"User-Agent": UA, "Accept": "application/json, */*"}
+
+          # ── TWSE (上市) ──────────────────────────────────────────────────────
+          print("=== TWSE OpenAPI ===")
+          try:
+              r = requests.get("https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
+                               headers=hdrs, timeout=30)
+              print(f"status={r.status_code}  len={len(r.text)}")
+              data = r.json()
+              print(f"records: {len(data)}")
+              if data:
+                  sample = {k.strip(): v for k, v in data[0].items()}
+                  print(f"keys: {list(sample.keys())}")
+                  # Find 9921
+                  for rec in data:
+                      if rec.get("公司代號","").strip() == "9921":
+                          print(f"9921 record: { {k.strip():v for k,v in rec.items()} }")
+                          break
+          except Exception as e:
+              print(f"ERROR: {e}", file=sys.stderr)
+
+          print()
+
+          # ── TPEx (上櫃) ──────────────────────────────────────────────────────
+          print("=== TPEx OpenAPI ===")
+          for params in [{"yearmonth": yearmonth}, None]:
               try:
-                  r = requests.post(url, data=body.encode("utf-8"), headers=headers, timeout=20)
-                  print(f"[{host}] step=1 status={r.status_code} len={len(r.text)}")
-                  print("=== HTML snippet (first 3000 chars) ===")
-                  print(r.text[:3000])
-                  print("===")
-                  # Also try batch step=0
-                  body2 = "encodeURIComponent=1&step=0&firstin=1&off=1&TYPEK=sii&year=&season="
-                  r2 = requests.post(url, data=body2.encode("utf-8"), headers=headers, timeout=30)
-                  print(f"[{host}] step=0 status={r2.status_code} len={len(r2.text)}")
-                  print("=== Batch HTML snippet (first 3000 chars) ===")
-                  print(r2.text[:3000])
-                  print("===")
-                  break  # stop after first successful host
+                  r2 = requests.get("https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue",
+                                    params=params, headers=hdrs, timeout=30)
+                  print(f"params={params}  status={r2.status_code}  len={len(r2.text)}")
+                  data2 = r2.json()
+                  records = data2 if isinstance(data2, list) else data2.get("data", [])
+                  print(f"records: {len(records)}")
+                  if records:
+                      sample2 = {k.strip(): v for k, v in records[0].items()}
+                      print(f"keys: {list(sample2.keys())}")
+                      # Find 8933
+                      for rec in records:
+                          norm = {k.strip(): v for k, v in rec.items()}
+                          code = norm.get("CompanyID") or norm.get("公司代號","")
+                          if str(code).strip() == "8933":
+                              print(f"8933 record: {norm}")
+                              break
+                      break
               except Exception as e:
-                  print(f"[{host}] ERROR: {e}", file=sys.stderr)
+                  print(f"params={params}  ERROR: {e}", file=sys.stderr)
           PYEOF
 
       # ── Main fetch ────────────────────────────────────────────────────────
