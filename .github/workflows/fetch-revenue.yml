@@ -30,26 +30,35 @@ jobs:
         run: |
           python3 - <<'PYEOF'
           import requests, sys
+          UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
           for host in ["https://mopsov.twse.com.tw", "https://mops.twse.com.tw"]:
               url = host + "/mops/web/t05st10_ifrs"
-              headers = {
-                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                  "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                  "Referer": url,
-                  "Accept": "text/html,*/*",
-                  "Accept-Language": "zh-TW,zh;q=0.9",
-              }
-              # Individual query for 9921 (step=1)
-              body = "encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=sii&co_id=9921&year=115&season=05"
               try:
-                  r = requests.post(url, data=body.encode("utf-8"), headers=headers, timeout=20)
+                  # Step 1: establish session cookie via GET
+                  sess = requests.Session()
+                  sess.headers.update({"User-Agent": UA, "Accept-Language": "zh-TW,zh;q=0.9"})
+                  g = sess.get(url, timeout=20)
+                  print(f"[{host}] GET status={g.status_code} cookies={dict(sess.cookies)}")
+
+                  post_headers = {
+                      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                      "Referer": url,
+                      "X-Requested-With": "XMLHttpRequest",
+                      "Accept": "text/html,*/*",
+                  }
+                  # Individual query for 9921 (step=1)
+                  body = "encodeURIComponent=1&step=1&firstin=1&off=1&TYPEK=sii&co_id=9921&year=115&season=05"
+                  r = sess.post(url, data=body.encode("utf-8"), headers=post_headers, timeout=20)
                   print(f"[{host}] step=1 status={r.status_code} len={len(r.text)}")
                   print("=== HTML snippet (first 3000 chars) ===")
                   print(r.text[:3000])
                   print("===")
-                  # Also try batch step=0
+                  # Batch step=0 (new session to avoid state pollution)
+                  sess2 = requests.Session()
+                  sess2.headers.update({"User-Agent": UA, "Accept-Language": "zh-TW,zh;q=0.9"})
+                  sess2.get(url, timeout=20)
                   body2 = "encodeURIComponent=1&step=0&firstin=1&off=1&TYPEK=sii&year=&season="
-                  r2 = requests.post(url, data=body2.encode("utf-8"), headers=headers, timeout=30)
+                  r2 = sess2.post(url, data=body2.encode("utf-8"), headers=post_headers, timeout=30)
                   print(f"[{host}] step=0 status={r2.status_code} len={len(r2.text)}")
                   print("=== Batch HTML snippet (first 3000 chars) ===")
                   print(r2.text[:3000])

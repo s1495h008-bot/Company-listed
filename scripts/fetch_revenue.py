@@ -120,31 +120,48 @@ def html_to_rows(html: str) -> list[list[str]]:
 
 
 # ─── MOPS request helpers ────────────────────────────────────────────────────
+#
+# MOPS requires an established session: GET the page first to receive a
+# session cookie, then POST the query with the same session object.
 
 def _mops_url(host: str) -> str:
     return host + MOPS_PATH
 
 
-def _post(url: str, body: str, retries: int = 2) -> str:
-    headers = {
+def _make_session(url: str) -> requests.Session:
+    """GET the MOPS page to obtain a session cookie, return the session."""
+    sess = requests.Session()
+    sess.headers.update({
         "User-Agent": UA,
+        "Accept": "text/html,application/xhtml+xml,*/*",
+        "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
+    })
+    sess.get(url, timeout=20)
+    return sess
+
+
+def _post(url: str, body: str, retries: int = 2) -> str:
+    sess = _make_session(url)
+    headers = {
         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         "Referer": url,
         "X-Requested-With": "XMLHttpRequest",
-        "Accept": "text/html,application/xhtml+xml,*/*",
-        "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
     }
     for attempt in range(retries):
         try:
-            r = requests.post(
+            r = sess.post(
                 url, data=body.encode("utf-8"),
                 headers=headers, timeout=30,
             )
             r.raise_for_status()
             r.encoding = "utf-8"
-            if r.text.strip():
-                return r.text
-            raise ValueError("Empty body")
+            text = r.text.strip()
+            if not text:
+                raise ValueError("Empty body")
+            # Detect homepage redirect (no query result)
+            if "<title>公開資訊觀測站</title>" in text and "t05st10" not in text[:500]:
+                raise ValueError("Got MOPS homepage instead of query result")
+            return r.text
         except Exception as exc:
             if attempt == retries - 1:
                 raise
