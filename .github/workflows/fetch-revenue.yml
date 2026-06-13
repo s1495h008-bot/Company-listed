@@ -26,7 +26,7 @@ jobs:
         run: pip install requests
 
       # ── Debug: validate both OpenAPI endpoints ───────────────────────────
-      - name: Debug API responses (TWSE + TPEx)
+      - name: Debug API responses (TWSE t187ap05_L + TPEx t187ap05_O)
         run: |
           python3 - <<'PYEOF'
           import requests, json, sys
@@ -38,53 +38,58 @@ jobs:
           rev_y = now.year      if now.month > 1 else now.year - 1
           roc_y = rev_y - 1911
           yearmonth = f"{roc_y}{rev_m:02d}"
-          UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-          hdrs = {"User-Agent": UA, "Accept": "application/json, */*"}
+          UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+          hdrs = {"User-Agent": UA, "Accept": "application/json, */*", "Accept-Language": "zh-TW,zh;q=0.9"}
 
-          # ── TWSE (上市) ──────────────────────────────────────────────────────
-          print("=== TWSE OpenAPI ===")
+          # ── TWSE 上市月營收 (t187ap05_L) ────────────────────────────────────
+          print("=== TWSE t187ap05_L (上市月營收) ===")
           try:
-              r = requests.get("https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
+              r = requests.get("https://openapi.twse.com.tw/v1/opendata/t187ap05_L",
                                headers=hdrs, timeout=30)
               print(f"status={r.status_code}  len={len(r.text)}")
               data = r.json()
               print(f"records: {len(data)}")
               if data:
                   sample = {k.strip(): v for k, v in data[0].items()}
-                  print(f"keys: {list(sample.keys())}")
-                  # Find 9921
+                  print(f"ALL keys: {list(sample.keys())}")
                   for rec in data:
                       if rec.get("公司代號","").strip() == "9921":
-                          print(f"9921 record: { {k.strip():v for k,v in rec.items()} }")
+                          norm = {k.strip(): v for k, v in rec.items()}
+                          print(f"9921 full record: {json.dumps(norm, ensure_ascii=False)}")
+                          # Validation: 當月營收 should be ~5357327 for 2026/05
+                          rev = norm.get("當月營收","")
+                          print(f"9921 當月營收={rev}  (expect ~5357327 仟元 for 2026/05)")
                           break
           except Exception as e:
               print(f"ERROR: {e}", file=sys.stderr)
 
           print()
 
-          # ── TPEx (上櫃) ──────────────────────────────────────────────────────
-          print("=== TPEx OpenAPI ===")
-          for params in [{"yearmonth": yearmonth}, None]:
+          # ── TPEx 上櫃月營收 (t187ap05_O) ────────────────────────────────────
+          print("=== TPEx t187ap05_O (上櫃月營收) ===")
+          for url, params in [
+              ("https://www.tpex.org.tw/openapi/v1/t187ap05_O", None),
+              ("https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue", {"yearmonth": yearmonth}),
+              ("https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue", None),
+          ]:
               try:
-                  r2 = requests.get("https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue",
-                                    params=params, headers=hdrs, timeout=30)
-                  print(f"params={params}  status={r2.status_code}  len={len(r2.text)}")
+                  r2 = requests.get(url, params=params, headers=hdrs, timeout=30)
+                  print(f"url={url.split('/')[-1]}  params={params}  status={r2.status_code}  len={len(r2.text)}")
                   data2 = r2.json()
                   records = data2 if isinstance(data2, list) else data2.get("data", [])
                   print(f"records: {len(records)}")
                   if records:
                       sample2 = {k.strip(): v for k, v in records[0].items()}
-                      print(f"keys: {list(sample2.keys())}")
-                      # Find 8933
+                      print(f"ALL keys: {list(sample2.keys())}")
                       for rec in records:
                           norm = {k.strip(): v for k, v in rec.items()}
-                          code = norm.get("CompanyID") or norm.get("公司代號","")
-                          if str(code).strip() == "8933":
-                              print(f"8933 record: {norm}")
+                          code = str(norm.get("公司代號") or norm.get("CompanyID","")).strip()
+                          if code == "8933":
+                              print(f"8933 full record: {json.dumps(norm, ensure_ascii=False)}")
                               break
                       break
               except Exception as e:
-                  print(f"params={params}  ERROR: {e}", file=sys.stderr)
+                  print(f"ERROR: {e}", file=sys.stderr)
           PYEOF
 
       # ── Main fetch ────────────────────────────────────────────────────────

@@ -30,8 +30,10 @@ UA = (
     "Chrome/124.0.0.0 Safari/537.36"
 )
 
-TWSE_URL = "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
-TPEX_URL = "https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue"
+# t187ap05_L = 上市公司月營收 (monthly revenue)
+# t187ap05_O = 上櫃公司月營收
+TWSE_URL = "https://openapi.twse.com.tw/v1/opendata/t187ap05_L"
+TPEX_URL = "https://www.tpex.org.tw/openapi/v1/t187ap05_O"
 
 
 # ─── utilities ───────────────────────────────────────────────────────────────
@@ -101,21 +103,54 @@ def _normalize_keys(record: dict) -> dict:
 
 # ─── TWSE (上市, sii) ─────────────────────────────────────────────────────────
 #
-# Field names returned by openapi.twse.com.tw/v1/opendata/t187ap03_L:
+# Field names for t187ap05_L (月營收):
 #   公司代號, 公司名稱,
-#   營業收入-當月營收, 營業收入-上月營收, 營業收入-去年當月營收,
-#   營業收入-上月比較增減(%), 營業收入-去年同月增減(%),
-#   累計營業收入-當月累計, 累計營業收入-去年累計,
-#   累計營業收入-前期比較增減(%)
+#   當月營收, 上月營收, 去年當月營收,
+#   上月比較增減(%), 去年同月增減(%),
+#   當月累計營收, 去年累計營收, 前期比較增減(%)
+#
+# Validation target: 9921 當月營收 = 5,357,327 (仟元, 2026/05)
+
+_TWSE_FIELD_MAPS = [
+    # Primary: expected t187ap05_L field names
+    {
+        "month":    "當月營收",
+        "prev_m":   "上月營收",
+        "prev_y":   "去年當月營收",
+        "ytd":      "當月累計營收",
+        "prev_ytd": "去年累計營收",
+    },
+    # Fallback: in case API uses prefixed names
+    {
+        "month":    "營業收入-當月營收",
+        "prev_m":   "營業收入-上月營收",
+        "prev_y":   "營業收入-去年當月營收",
+        "ytd":      "累計營業收入-當月累計",
+        "prev_ytd": "累計營業收入-去年累計",
+    },
+]
+
+
+def _detect_twse_fields(sample: dict) -> dict:
+    for fm in _TWSE_FIELD_MAPS:
+        if fm["month"] in sample:
+            return fm
+    # Unknown layout — return first map and let safe_num return None
+    print(f"  [WARN] unknown TWSE field layout; keys={list(sample.keys())}", file=sys.stderr)
+    return _TWSE_FIELD_MAPS[0]
+
 
 def fetch_twse() -> dict[str, dict]:
     print("Fetching 上市 (sii) from TWSE OpenAPI ...")
     records = _get_json(TWSE_URL)
     print(f"  total records: {len(records)}")
-    if records:
-        sample = _normalize_keys(records[0])
-        print(f"  [debug] sample keys: {list(sample.keys())}")
-        print(f"  [debug] sample values: {list(sample.values())[:5]}")
+    if not records:
+        return {}
+
+    sample = _normalize_keys(records[0])
+    print(f"  [debug] keys: {list(sample.keys())}")
+    fm = _detect_twse_fields(sample)
+    print(f"  [debug] using field map: month='{fm['month']}'")
 
     result: dict[str, dict] = {}
     for raw in records:
@@ -123,27 +158,45 @@ def fetch_twse() -> dict[str, dict]:
         code = rec.get("公司代號", "").strip()
         if not code:
             continue
-        result[code] = {
-            "revenue_month":           safe_num(rec.get("營業收入-當月營收")),
-            "revenue_prev_month":      safe_num(rec.get("營業收入-上月營收")),
-            "revenue_prev_year_month": safe_num(rec.get("營業收入-去年當月營收")),
-            "revenue_ytd":             safe_num(rec.get("累計營業收入-當月累計")),
-            "revenue_prev_year_ytd":   safe_num(rec.get("累計營業收入-去年累計")),
+        entry = {
+            "revenue_month":           safe_num(rec.get(fm["month"])),
+            "revenue_prev_month":      safe_num(rec.get(fm["prev_m"])),
+            "revenue_prev_year_month": safe_num(rec.get(fm["prev_y"])),
+            "revenue_ytd":             safe_num(rec.get(fm["ytd"])),
+            "revenue_prev_year_ytd":   safe_num(rec.get(fm["prev_ytd"])),
         }
+        result[code] = entry
+        # Validation spot-check
+        if code == "9921":
+            print(f"  [debug] 9921 raw={rec}")
+            print(f"  [debug] 9921 parsed revenue_month={entry['revenue_month']} (expect ~5357327)")
+
     print(f"  ✓ {len(result)} companies parsed")
     return result
 
 
 # ─── TPEx (上櫃, otc) ─────────────────────────────────────────────────────────
 #
-# Field names returned by tpex.org.tw/openapi/v1/tpex_monthly_revenue:
-#   CompanyID, CompanyName (or 公司代號, 公司名稱 — depends on API version)
-#   Revenue, PreviousRevenue, LastYearRevenue,
-#   MoMChangePercent, YoYChangePercent,
-#   AccumulatedRevenue, LastYearAccumulatedRevenue, AccumulatedChangePercent
+# t187ap05_O mirrors the TWSE naming convention for OTC companies.
+# Expected fields (same as t187ap05_L):
+#   公司代號, 公司名稱,
+#   當月營收, 上月營收, 去年當月營收,
+#   上月比較增減(%), 去年同月增減(%),
+#   當月累計營收, 去年累計營收, 前期比較增減(%)
+#
+# Fallback: tpex_monthly_revenue endpoint with English field names
 
 _TPEX_FIELD_MAPS = [
-    # English field names (newer API)
+    # Same naming as t187ap05_L (most likely for t187ap05_O)
+    {
+        "code":     "公司代號",
+        "month":    "當月營收",
+        "prev_m":   "上月營收",
+        "prev_y":   "去年當月營收",
+        "ytd":      "當月累計營收",
+        "prev_ytd": "去年累計營收",
+    },
+    # English field names (tpex_monthly_revenue endpoint)
     {
         "code":     "CompanyID",
         "month":    "Revenue",
@@ -152,7 +205,7 @@ _TPEX_FIELD_MAPS = [
         "ytd":      "AccumulatedRevenue",
         "prev_ytd": "LastYearAccumulatedRevenue",
     },
-    # Chinese field names (older API / fallback)
+    # Alternate Chinese names
     {
         "code":     "公司代號",
         "month":    "當月營收",
@@ -163,10 +216,12 @@ _TPEX_FIELD_MAPS = [
     },
 ]
 
+_TPEX_FALLBACK_URL = "https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue"
+
 
 def _detect_tpex_fields(sample: dict) -> dict | None:
     for fm in _TPEX_FIELD_MAPS:
-        if fm["code"] in sample:
+        if fm["code"] in sample and fm["month"] in sample:
             return fm
     return None
 
@@ -174,41 +229,47 @@ def _detect_tpex_fields(sample: dict) -> dict | None:
 def fetch_tpex() -> dict[str, dict]:
     print("Fetching 上櫃 (otc) from TPEx OpenAPI ...")
 
-    # Compute ROC year/month for the most recent report month
     now   = datetime.now(TW_TZ)
     rev_m = now.month - 1 if now.month > 1 else 12
     rev_y = now.year      if now.month > 1 else now.year - 1
     roc_y = rev_y - 1911
     yearmonth = f"{roc_y}{rev_m:02d}"
 
+    # Try primary endpoint then fallback with/without params
+    attempts = [
+        (TPEX_URL, None),
+        (TPEX_URL, {"yearmonth": yearmonth}),
+        (_TPEX_FALLBACK_URL, {"yearmonth": yearmonth}),
+        (_TPEX_FALLBACK_URL, None),
+    ]
     records = None
-    for params in [{"yearmonth": yearmonth}, None]:
+    for url, params in attempts:
         try:
-            records = _get_json(TPEX_URL, params=params)
-            if records:
-                print(f"  params={params}  total records: {len(records)}")
+            recs = _get_json(url, params=params)
+            if recs:
+                print(f"  url={url.split('/')[-1]}  params={params}  records={len(recs)}")
+                records = recs
                 break
-            print(f"  params={params}  → empty, trying next ...")
+            print(f"  url={url.split('/')[-1]}  params={params}  → empty")
         except Exception as exc:
-            print(f"  params={params}  ERROR: {exc}", file=sys.stderr)
+            print(f"  url={url.split('/')[-1]}  params={params}  ERROR: {exc}", file=sys.stderr)
 
     if not records:
-        print("  ✗ TPEx returned no data", file=sys.stderr)
+        print("  ✗ TPEx returned no data from any endpoint", file=sys.stderr)
         return {}
 
     sample = _normalize_keys(records[0])
-    print(f"  [debug] sample keys: {list(sample.keys())}")
-    print(f"  [debug] sample values: {list(sample.values())[:5]}")
-
+    print(f"  [debug] keys: {list(sample.keys())}")
     fm = _detect_tpex_fields(sample)
     if fm is None:
         print(f"  ✗ unknown TPEx field layout; keys={list(sample.keys())}", file=sys.stderr)
         return {}
 
+    print(f"  [debug] using field map: code='{fm['code']}' month='{fm['month']}'")
     result: dict[str, dict] = {}
     for raw in records:
         rec = _normalize_keys(raw)
-        code = rec.get(fm["code"], "").strip()
+        code = str(rec.get(fm["code"], "")).strip()
         if not code:
             continue
         result[code] = {

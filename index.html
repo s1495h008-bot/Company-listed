@@ -99,6 +99,14 @@
     border-top: 1px solid var(--border);
   }
 
+  .badge {
+    display: inline-block; font-size: .68rem; font-weight: 600; padding: 2px 7px;
+    border-radius: 10px; vertical-align: middle; margin-left: 6px;
+  }
+  .badge-live   { background: #eafaf1; color: var(--pos); border: 1px solid #a3e4b7; }
+  .badge-cached { background: #fff8e6; color: #b7791f;  border: 1px solid #f6c96e; }
+  .badge-err    { background: var(--neg-bg); color: var(--neg); border: 1px solid #fab1b1; }
+
   /* ── lang toggle ── */
   #lang-en .zh { display: none; }
   #lang-en .en { display: inline; }
@@ -184,8 +192,8 @@
 </main>
 
 <footer>
-  <span class="zh">資料來源：台灣證券交易所 / 櫃買中心 OpenAPI・MOPS 公開資訊觀測站　｜　單位：仟元（官方原始值）</span>
-  <span class="en">Source: TWSE / TPEx OpenAPI, MOPS &nbsp;|&nbsp; Raw data in thousands NTD (仟元)</span>
+  <span class="zh">資料來源：台灣證券交易所 OpenAPI (t187ap05_L) / 櫃買中心 OpenAPI (t187ap05_O)　｜　瀏覽器即時載入・單位：仟元</span>
+  <span class="en">Source: TWSE OpenAPI (t187ap05_L) / TPEx OpenAPI (t187ap05_O) &nbsp;|&nbsp; Live browser fetch &nbsp;|&nbsp; Unit: thousands NTD</span>
 </footer>
 
 <script>
@@ -193,6 +201,15 @@
 let DATA = null;
 let UNIT = 'm';   // 'm' | 'k' | '1'
 let LANG = 'zh';  // 'zh' | 'en'
+
+// companies list (used to filter/order API results)
+let COMPANIES = [];
+
+// ─── company list ─────────────────────────────────────────────────────────────
+async function loadCompanies() {
+  const r = await fetch('companies.json');
+  COMPANIES = await r.json();
+}
 
 // ─── unit & lang helpers ──────────────────────────────────────────────────────
 const UNIT_LABEL = {
@@ -208,6 +225,17 @@ function fromK(v, unit) {
   if (unit === 'm') return v / 1000;
   if (unit === 'k') return v;
   return v * 1000;
+}
+
+function safeNum(s) {
+  if (s == null) return null;
+  const n = parseFloat(String(s).replace(/,/g, ''));
+  return isNaN(n) ? null : n;
+}
+
+function pctChange(cur, base) {
+  if (cur == null || base == null || base === 0) return null;
+  return Math.round((cur - base) / Math.abs(base) * 10000) / 100;
 }
 
 function fmtNum(v_k, unit) {
@@ -364,39 +392,179 @@ function updateHeader() {
       : `${MN[mi]} ${y}`;
 }
 
+function setUpdateInfo(text, badgeClass, badgeText) {
+  document.getElementById('update-info').innerHTML =
+    `${text} <span class="badge ${badgeClass}">${badgeText}</span>`;
+}
+
+// ─── infer report month from current date ─────────────────────────────────────
+function inferReportMonth() {
+  // Data published on ~12th covers previous month (Taiwan time ≈ UTC+8)
+  const now = new Date(Date.now() + 8 * 3600 * 1000); // approx TW time
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth() + 1; // 1-12
+  const prevM = m === 1 ? 12 : m - 1;
+  const prevY = m === 1 ? y - 1 : y;
+  return `${prevY}-${String(prevM).padStart(2, '0')}`;
+}
+
+// ─── live API fetch (TWSE + TPEx) ────────────────────────────────────────────
+//
+// TWSE t187ap05_L fields (上市月營收):
+//   公司代號, 公司名稱, 當月營收, 上月營收, 去年當月營收,
+//   當月累計營收, 去年累計營收
+//
+// TPEx t187ap05_O fields (上櫃月營收) — same structure as TWSE
+
+const TWSE_API = 'https://openapi.twse.com.tw/v1/opendata/t187ap05_L';
+const TPEX_APIS = [
+  'https://www.tpex.org.tw/openapi/v1/t187ap05_O',
+  'https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue',
+];
+
+// Possible field name variants across API versions
+const FIELD_VARIANTS = {
+  month:    ['當月營收', 'Revenue'],
+  prev_m:   ['上月營收', 'PreviousRevenue'],
+  prev_y:   ['去年當月營收', 'LastYearRevenue'],
+  ytd:      ['當月累計營收', '當月累積營收', 'AccumulatedRevenue'],
+  prev_ytd: ['去年累計營收', '去年累積營收', 'LastYearAccumulatedRevenue'],
+};
+
+function pickField(rec, variants) {
+  for (const k of variants) if (k in rec) return rec[k];
+  return undefined;
+}
+
+function normalizeRec(raw) {
+  const rec = {};
+  for (const [k, v] of Object.entries(raw)) rec[k.trim()] = v;
+  return rec;
+}
+
+function parseApiRecords(records) {
+  const map = {};
+  for (const raw of records) {
+    const rec  = normalizeRec(raw);
+    const code = (rec['公司代號'] || rec['CompanyID'] || '').trim();
+    if (!code) continue;
+    const rm  = safeNum(pickField(rec, FIELD_VARIANTS.month));
+    const rpm = safeNum(pickField(rec, FIELD_VARIANTS.prev_m));
+    const rpy = safeNum(pickField(rec, FIELD_VARIANTS.prev_y));
+    const ryt = safeNum(pickField(rec, FIELD_VARIANTS.ytd));
+    const rpyt = safeNum(pickField(rec, FIELD_VARIANTS.prev_ytd));
+    map[code] = {
+      revenue_month:           rm,
+      revenue_prev_month:      rpm,
+      revenue_prev_year_month: rpy,
+      revenue_ytd:             ryt,
+      revenue_prev_year_ytd:   rpyt,
+      revenue_month_yoy: pctChange(rm,  rpy),
+      revenue_month_mom: pctChange(rm,  rpm),
+      revenue_ytd_yoy:   pctChange(ryt, rpyt),
+    };
+  }
+  return map;
+}
+
+async function fetchJson(url) {
+  const r = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const data = await r.json();
+  return Array.isArray(data) ? data : (data.data || []);
+}
+
+async function fetchLiveData() {
+  const allMap = {};
+
+  // TWSE (listed companies)
+  const twseRecs = await fetchJson(TWSE_API);
+  Object.assign(allMap, parseApiRecords(twseRecs));
+
+  // TPEx (OTC companies) — try endpoints in order
+  let tpexRecs = [];
+  for (const url of TPEX_APIS) {
+    try {
+      tpexRecs = await fetchJson(url);
+      if (tpexRecs.length) break;
+    } catch (_) { /* try next */ }
+  }
+  Object.assign(allMap, parseApiRecords(tpexRecs));
+
+  // Build company list
+  const companies = COMPANIES.map(co => {
+    const rec = allMap[co.code];
+    if (!rec) return { ...co, error: 'no_data' };
+    return { code: co.code, name_zh: co.name_zh, name_en: co.name_en, market: co.market, ...rec };
+  });
+
+  return {
+    updated_at:   new Date().toISOString(),
+    report_month: inferReportMonth(),
+    companies,
+    _source: 'live',
+  };
+}
+
 // ─── load ────────────────────────────────────────────────────────────────────
 async function load() {
+  await loadCompanies();
+
+  // 1. Try live API fetch
+  try {
+    DATA = await fetchLiveData();
+    const hasData = DATA.companies.some(c => !c.error && c.revenue_month != null);
+    if (!hasData) throw new Error('Live API returned no revenue values');
+
+    const now = new Date();
+    const twFmt = new Intl.DateTimeFormat('zh-TW', {
+      timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+    setUpdateInfo(
+      `${twFmt.format(now)} (Taipei)`,
+      'badge-live', LANG === 'zh' ? '即時' : 'Live'
+    );
+    updateHeader();
+    renderTable();
+    document.getElementById('summary-box').textContent = buildSummary();
+    return;
+  } catch (liveErr) {
+    console.warn('Live API failed, falling back to cached JSON:', liveErr.message);
+  }
+
+  // 2. Fallback: load cached data/revenue.json
   try {
     const r = await fetch('data/revenue.json?_=' + Date.now());
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     DATA = await r.json();
 
-    if (!DATA.report_month)
-      throw new Error(
-        '資料尚未生成。請至 GitHub → Actions → Fetch Monthly Revenue → Run workflow 手動觸發。\n' +
-        'Data not yet generated. Please trigger the workflow manually via GitHub Actions.'
-      );
+    if (!DATA.report_month) throw new Error('Cached data is empty');
 
-    const dt = new Date(DATA.updated_at);
+    const dt = DATA.updated_at ? new Date(DATA.updated_at) : null;
     const twFmt = new Intl.DateTimeFormat('zh-TW', {
-      timeZone: 'Asia/Taipei',
-      year: 'numeric', month: '2-digit', day: '2-digit',
+      timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit'
     });
-    document.getElementById('update-info').textContent =
-      `Updated ${twFmt.format(dt)} (Taipei)`;
-
+    const timeStr = dt ? twFmt.format(dt) : '—';
+    setUpdateInfo(
+      `${timeStr} (Taipei)`,
+      'badge-cached', LANG === 'zh' ? '快取資料' : 'Cached'
+    );
+    document.getElementById('error-area').innerHTML =
+      `<div class="err">⚠ <span class="zh">即時 API 無法連線，顯示快取資料</span>` +
+      `<span class="en">Live API unavailable — showing cached data</span></div>`;
     updateHeader();
     renderTable();
     document.getElementById('summary-box').textContent = buildSummary();
-
-  } catch (err) {
+  } catch (cacheErr) {
+    setUpdateInfo('—', 'badge-err', 'Error');
     document.getElementById('error-area').innerHTML =
-      `<div class="err">⚠ ${err.message}</div>`;
+      `<div class="err">⚠ <span class="zh">無法載入資料（即時 API 與快取均失敗）</span>` +
+      `<span class="en">Cannot load data — live API and cache both failed</span></div>`;
     document.getElementById('table-body').innerHTML =
       `<tr><td colspan="7" style="text-align:center;padding:28px;color:#b2bec3">No data</td></tr>`;
     document.getElementById('summary-box').textContent = '(No data)';
-    document.getElementById('update-info').textContent = 'No data yet';
   }
 }
 
