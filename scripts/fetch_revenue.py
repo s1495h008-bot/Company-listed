@@ -40,9 +40,16 @@ UA = (
 
 TWSE_URL = "https://openapi.twse.com.tw/v1/opendata/t187ap05_L"
 TPEX_URLS = [
-    "https://www.tpex.org.tw/openapi/v1/t187ap05_O",
-    "https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue",
+    "https://www.tpex.org.tw/openapi/v1/t187ap05_O",        # 上櫃
+    "https://www.tpex.org.tw/openapi/v1/t187ap05_R",        # 興櫃 (rotc)
+    "https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue",  # fallback
 ]
+# sii companies sometimes listed on TWSE emerging board — try this too
+TWSE_URLS_EXTRA = [
+    "https://openapi.twse.com.tw/v1/opendata/t187ap05_R",   # 上市興櫃
+]
+# Companies known to be missing; used to print targeted debug
+WATCH_CODES = {"8933", "6804", "4559", "8938", "5291"}
 
 # CORS proxies tried in order; None = direct (no proxy)
 PROXIES = [
@@ -179,30 +186,56 @@ def _parse_records(records: list[dict], label: str) -> dict[str, dict]:
         if code == "9921":
             print(f"  [debug] 9921 raw={dict(list(rec.items())[:8])}")
             print(f"  [debug] 9921 revenue_month={rm}  (expect ~5357327)")
+        if code in WATCH_CODES:
+            print(f"  [debug] FOUND watch code {code}: revenue_month={rm}")
     return result
 
 
 # ─── main fetchers ────────────────────────────────────────────────────────────
 
 def fetch_twse() -> dict[str, dict]:
-    print(f"Fetching 上市 (sii) via proxy → {TWSE_URL}")
-    records = _get_json(TWSE_URL)
-    return _parse_records(records, "TWSE")
+    result = {}
+    for url in [TWSE_URL] + TWSE_URLS_EXTRA:
+        print(f"Fetching via proxy → {url}")
+        try:
+            records = _get_json(url)
+            label = url.split("/")[-1]
+            parsed = _parse_records(records, label)
+            result.update(parsed)
+            found = [c for c in WATCH_CODES if c in parsed]
+            if found:
+                print(f"  [debug] watch codes found in {label}: {found}")
+        except Exception as exc:
+            print(f"  ✗ {url}: {exc}", file=sys.stderr)
+    missing = [c for c in WATCH_CODES if c not in result]
+    if missing:
+        print(f"  [debug] watch codes NOT in TWSE data: {missing}")
+    return result
 
 
 def fetch_tpex() -> dict[str, dict]:
+    result = {}
     last_exc = None
     for url in TPEX_URLS:
-        print(f"Fetching 上櫃 (otc) via proxy → {url}")
+        print(f"Fetching via proxy → {url}")
         try:
             records = _get_json(url)
             if records:
-                return _parse_records(records, "TPEx")
+                label = url.split("/")[-1]
+                parsed = _parse_records(records, label)
+                result.update(parsed)
+                found = [c for c in WATCH_CODES if c in parsed]
+                if found:
+                    print(f"  [debug] watch codes found in {label}: {found}")
         except Exception as exc:
             print(f"  ✗ {url}: {exc}", file=sys.stderr)
             last_exc = exc
-    print(f"  ✗ all TPEx endpoints failed: {last_exc}", file=sys.stderr)
-    return {}
+    missing = [c for c in WATCH_CODES if c not in result]
+    if missing:
+        print(f"  [debug] watch codes NOT in any TPEx endpoint: {missing}")
+    if not result:
+        print(f"  ✗ all TPEx endpoints failed: {last_exc}", file=sys.stderr)
+    return result
 
 
 # ─── main ────────────────────────────────────────────────────────────────────
