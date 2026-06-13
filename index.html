@@ -416,11 +416,18 @@ function inferReportMonth() {
 //
 // TPEx t187ap05_O fields (上櫃月營收) — same structure as TWSE
 
-const TWSE_API = 'https://openapi.twse.com.tw/v1/opendata/t187ap05_L';
-const TPEX_APIS = [
-  'https://www.tpex.org.tw/openapi/v1/t187ap05_O',
-  'https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue',
-];
+const TWSE_DIRECT = 'https://openapi.twse.com.tw/v1/opendata/t187ap05_L';
+const TPEX_DIRECT = 'https://www.tpex.org.tw/openapi/v1/t187ap05_O';
+
+// CORS proxies — tried in order when direct fetch fails
+function proxyUrls(target) {
+  const enc = encodeURIComponent(target);
+  return [
+    target,                                              // direct (works if CORS allowed)
+    `https://corsproxy.io/?url=${enc}`,                  // corsproxy.io
+    `https://api.allorigins.win/raw?url=${enc}`,         // allorigins
+  ];
+}
 
 // Possible field name variants across API versions
 const FIELD_VARIANTS = {
@@ -467,29 +474,36 @@ function parseApiRecords(records) {
   return map;
 }
 
-async function fetchJson(url) {
-  const r = await fetch(url, { headers: { Accept: 'application/json' } });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const data = await r.json();
-  return Array.isArray(data) ? data : (data.data || []);
+async function fetchJsonViaProxy(target) {
+  let lastErr;
+  for (const url of proxyUrls(target)) {
+    try {
+      const r = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      // allorigins may return { contents: "<json string>" }
+      const raw = Array.isArray(data) ? data
+                : Array.isArray(data.data) ? data.data
+                : typeof data.contents === 'string' ? JSON.parse(data.contents)
+                : [];
+      if (raw.length) return raw;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error(`No data from ${target}`);
 }
 
 async function fetchLiveData() {
   const allMap = {};
 
-  // TWSE (listed companies)
-  const twseRecs = await fetchJson(TWSE_API);
+  // TWSE (listed companies) — try direct then proxies
+  const twseRecs = await fetchJsonViaProxy(TWSE_DIRECT);
   Object.assign(allMap, parseApiRecords(twseRecs));
 
-  // TPEx (OTC companies) — try endpoints in order
-  let tpexRecs = [];
-  for (const url of TPEX_APIS) {
-    try {
-      tpexRecs = await fetchJson(url);
-      if (tpexRecs.length) break;
-    } catch (_) { /* try next */ }
-  }
-  Object.assign(allMap, parseApiRecords(tpexRecs));
+  // TPEx (OTC companies)
+  try {
+    const tpexRecs = await fetchJsonViaProxy(TPEX_DIRECT);
+    Object.assign(allMap, parseApiRecords(tpexRecs));
+  } catch (_) { /* TPEx failure is non-fatal if we have TWSE data */ }
 
   // Build company list
   const companies = COMPANIES.map(co => {
