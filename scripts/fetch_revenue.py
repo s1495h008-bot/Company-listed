@@ -1,42 +1,37 @@
 #!/usr/bin/env python3
 """
-Fetch monthly revenue from MOPS (公開資訊觀測站).
-URL: https://mopsov.twse.com.tw/mops/web/t05st10_ifrs
-     https://mops.twse.com.tw/mops/web/t05st10_ifrs  (fallback)
+Fetch monthly revenue from official Taiwan exchange OpenAPIs.
 
-Strategy:
-  1. Batch POST (step=0) per market type → parse all rows from HTML
-  2. Individual POST (step=1) per company as fallback
-  3. Debug output on first call so logs show actual field structure
+Sources:
+  上市 (sii): https://openapi.twse.com.tw/v1/opendata/t187ap03_L
+  上櫃 (otc): https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue
 
-All values in 仟元 (thousands NTD) as returned by MOPS.
+These REST APIs return JSON and are designed for programmatic access
+(no session/cookie/WAF requirements unlike the MOPS web interface).
+
+All revenue values are in 仟元 (thousands NTD) as returned by the APIs.
 """
 
 import json
 import os
-import re
 import sys
 import time
 import requests
 from datetime import datetime, timezone, timedelta
-from html.parser import HTMLParser
 
 TW_TZ         = timezone(timedelta(hours=8))
 BASE           = os.path.dirname(__file__)
 COMPANIES_FILE = os.path.join(BASE, "..", "companies.json")
 OUTPUT_FILE    = os.path.join(BASE, "..", "data", "revenue.json")
 
-MOPS_HOSTS = [
-    "https://mopsov.twse.com.tw",
-    "https://mops.twse.com.tw",
-]
-MOPS_PATH = "/mops/web/t05st10_ifrs"
-
 UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/124.0.0.0 Safari/537.36"
 )
+
+TWSE_URL = "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+TPEX_URL = "https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue"
 
 
 # ─── utilities ───────────────────────────────────────────────────────────────
@@ -71,225 +66,160 @@ def infer_report_month() -> str:
     return f"{now.year}-{now.month - 1:02d}"
 
 
-# ─── HTML table parser (depth-agnostic) ─────────────────────────────────────
-#
-# Key fix: no depth tracking – collect rows from ALL nested tables.
-# MOPS wraps its data table inside a layout table, so any depth-limited
-# parser will silently skip the actual data rows.
+# ─── API fetch helpers ────────────────────────────────────────────────────────
 
-class _TP(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.rows: list[list[str]] = []
-        self._row: list[str] = []
-        self._buf: list[str] = []
-        self._in_cell = False
-
-    def handle_starttag(self, tag, attrs):
-        tag = tag.lower()
-        if tag in ("td", "th"):
-            self._in_cell = True
-            self._buf = []
-        elif tag == "tr":
-            self._row = []
-
-    def handle_endtag(self, tag):
-        tag = tag.lower()
-        if tag in ("td", "th") and self._in_cell:
-            self._row.append("".join(self._buf).strip())
-            self._in_cell = False
-        elif tag == "tr" and self._row:
-            self.rows.append(self._row[:])
-            self._row = []
-
-    def handle_data(self, data):
-        if self._in_cell:
-            self._buf.append(data)
-
-    def handle_entityref(self, name):
-        pass  # ignore &nbsp; etc. in cell text
-
-    def handle_charref(self, name):
-        pass
-
-
-def html_to_rows(html: str) -> list[list[str]]:
-    p = _TP()
-    p.feed(html)
-    return p.rows
-
-
-# ─── MOPS request helpers ────────────────────────────────────────────────────
-#
-# MOPS requires an established session: GET the page first to receive a
-# session cookie, then POST the query with the same session object.
-
-def _mops_url(host: str) -> str:
-    return host + MOPS_PATH
-
-
-def _make_session(url: str) -> requests.Session:
-    """GET the MOPS page to obtain a session cookie, return the session."""
-    sess = requests.Session()
-    sess.headers.update({
-        "User-Agent": UA,
-        "Accept": "text/html,application/xhtml+xml,*/*",
-        "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
-    })
-    sess.get(url, timeout=20)
-    return sess
-
-
-def _post(url: str, body: str, retries: int = 2) -> str:
-    sess = _make_session(url)
+def _get_json(url: str, params: dict | None = None, retries: int = 3) -> list[dict]:
     headers = {
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "Referer": url,
-        "X-Requested-With": "XMLHttpRequest",
+        "User-Agent": UA,
+        "Accept": "application/json, */*",
+        "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
     }
     for attempt in range(retries):
         try:
-            r = sess.post(
-                url, data=body.encode("utf-8"),
-                headers=headers, timeout=30,
-            )
+            r = requests.get(url, params=params, headers=headers, timeout=30)
             r.raise_for_status()
-            r.encoding = "utf-8"
-            text = r.text.strip()
-            if not text:
-                raise ValueError("Empty body")
-            # Detect homepage redirect (no query result)
-            if "<title>公開資訊觀測站</title>" in text and "t05st10" not in text[:500]:
-                raise ValueError("Got MOPS homepage instead of query result")
-            return r.text
+            data = r.json()
+            if isinstance(data, list):
+                return data
+            # Some endpoints wrap in a dict
+            for key in ("data", "Data", "result", "Result"):
+                if key in data and isinstance(data[key], list):
+                    return data[key]
+            raise ValueError(f"Unexpected JSON structure: {list(data.keys()) if isinstance(data, dict) else type(data)}")
         except Exception as exc:
             if attempt == retries - 1:
                 raise
-            wait = 3 * (attempt + 1)
-            print(f"    retry {attempt+1} ({wait}s): {exc}", file=sys.stderr)
+            wait = 2 ** attempt
+            print(f"  retry {attempt+1} in {wait}s: {exc}", file=sys.stderr)
             time.sleep(wait)
 
 
-def _post_with_fallback(body: str) -> tuple[str, str]:
-    """Try each MOPS host in order; return (html, url_used)."""
-    last_exc = None
-    for host in MOPS_HOSTS:
-        url = _mops_url(host)
-        try:
-            html = _post(url, body)
-            return html, url
-        except Exception as exc:
-            print(f"  host {host} failed: {exc}", file=sys.stderr)
-            last_exc = exc
-    raise RuntimeError(f"All MOPS hosts failed. Last: {last_exc}")
+def _normalize_keys(record: dict) -> dict:
+    """Strip whitespace from all keys and values."""
+    return {k.strip(): (v.strip() if isinstance(v, str) else v) for k, v in record.items()}
 
 
-# ─── batch (step=0) parsing ──────────────────────────────────────────────────
+# ─── TWSE (上市, sii) ─────────────────────────────────────────────────────────
 #
-# Batch table columns (0-indexed):
-#   0  公司代號   ← used to key the result dict
-#   1  公司名稱
-#   2  當月營收
-#   3  上月營收
-#   4  去年當月營收
-#   5  上月比較增減(%)
-#   6  去年同月增減(%)
-#   7  當月累計營收
-#   8  去年累計營收
-#   9  前期比較增減(%)
+# Field names returned by openapi.twse.com.tw/v1/opendata/t187ap03_L:
+#   公司代號, 公司名稱,
+#   營業收入-當月營收, 營業收入-上月營收, 營業收入-去年當月營收,
+#   營業收入-上月比較增減(%), 營業收入-去年同月增減(%),
+#   累計營業收入-當月累計, 累計營業收入-去年累計,
+#   累計營業收入-前期比較增減(%)
 
-def _parse_batch_row(row: list[str]) -> dict | None:
-    if len(row) < 9:
-        return None
-    code = row[0].strip()
-    if not re.match(r"^\d{4,5}$", code):
-        return None
-    return {
-        "revenue_month":           safe_num(row[2]),
-        "revenue_prev_month":      safe_num(row[3]),
-        "revenue_prev_year_month": safe_num(row[4]),
-        "revenue_ytd":             safe_num(row[7]),
-        "revenue_prev_year_ytd":   safe_num(row[8]),
-    }
-
-
-def fetch_batch(typek: str) -> dict[str, dict]:
-    body = (
-        f"encodeURIComponent=1&step=0&firstin=1&off=1"
-        f"&TYPEK={typek}&year=&season="
-    )
-    html, url = _post_with_fallback(body)
-    rows = html_to_rows(html)
-
-    # debug: show first few rows so we can validate column layout
-    print(f"  [debug] total rows parsed from HTML: {len(rows)}")
-    for i, r in enumerate(rows[:5]):
-        print(f"  [debug] row[{i}]: {r[:6]}")
+def fetch_twse() -> dict[str, dict]:
+    print("Fetching 上市 (sii) from TWSE OpenAPI ...")
+    records = _get_json(TWSE_URL)
+    print(f"  total records: {len(records)}")
+    if records:
+        sample = _normalize_keys(records[0])
+        print(f"  [debug] sample keys: {list(sample.keys())}")
+        print(f"  [debug] sample values: {list(sample.values())[:5]}")
 
     result: dict[str, dict] = {}
-    for row in rows:
-        rec = _parse_batch_row(row)
-        if rec:
-            result[row[0].strip()] = rec
+    for raw in records:
+        rec = _normalize_keys(raw)
+        code = rec.get("公司代號", "").strip()
+        if not code:
+            continue
+        result[code] = {
+            "revenue_month":           safe_num(rec.get("營業收入-當月營收")),
+            "revenue_prev_month":      safe_num(rec.get("營業收入-上月營收")),
+            "revenue_prev_year_month": safe_num(rec.get("營業收入-去年當月營收")),
+            "revenue_ytd":             safe_num(rec.get("累計營業收入-當月累計")),
+            "revenue_prev_year_ytd":   safe_num(rec.get("累計營業收入-去年累計")),
+        }
+    print(f"  ✓ {len(result)} companies parsed")
     return result
 
 
-# ─── individual (step=1) parsing ─────────────────────────────────────────────
+# ─── TPEx (上櫃, otc) ─────────────────────────────────────────────────────────
 #
-# Individual query returns one company's history; the most recent row is first.
-# Column layout (0-indexed):
-#   0  年度/月份 (e.g. "115/05" or "11505" – NOT company code)
-#   1  當月營收
-#   2  上月營收
-#   3  去年當月營收
-#   4  上月比較增減(%)
-#   5  去年同月增減(%)
-#   6  當月累計營收
-#   7  去年累計營收
-#   8  前期比較增減(%)
+# Field names returned by tpex.org.tw/openapi/v1/tpex_monthly_revenue:
+#   CompanyID, CompanyName (or 公司代號, 公司名稱 — depends on API version)
+#   Revenue, PreviousRevenue, LastYearRevenue,
+#   MoMChangePercent, YoYChangePercent,
+#   AccumulatedRevenue, LastYearAccumulatedRevenue, AccumulatedChangePercent
 
-def _parse_individual_row(row: list[str]) -> dict | None:
-    """Pick first row where col[1] looks like a valid revenue number."""
-    if len(row) < 7:
-        return None
-    # col[0] should be a year/month indicator, NOT a company code
-    if re.match(r"^\d{4,5}$", row[0].strip()):
-        # might be matched as company code – skip (shouldn't happen but guard)
-        return None
-    rev = safe_num(row[1])
-    if rev is None:
-        return None
-    return {
-        "revenue_month":           rev,
-        "revenue_prev_month":      safe_num(row[2]) if len(row) > 2 else None,
-        "revenue_prev_year_month": safe_num(row[3]) if len(row) > 3 else None,
-        "revenue_ytd":             safe_num(row[6]) if len(row) > 6 else None,
-        "revenue_prev_year_ytd":   safe_num(row[7]) if len(row) > 7 else None,
-    }
+_TPEX_FIELD_MAPS = [
+    # English field names (newer API)
+    {
+        "code":     "CompanyID",
+        "month":    "Revenue",
+        "prev_m":   "PreviousRevenue",
+        "prev_y":   "LastYearRevenue",
+        "ytd":      "AccumulatedRevenue",
+        "prev_ytd": "LastYearAccumulatedRevenue",
+    },
+    # Chinese field names (older API / fallback)
+    {
+        "code":     "公司代號",
+        "month":    "當月營收",
+        "prev_m":   "上月營收",
+        "prev_y":   "去年當月營收",
+        "ytd":      "當月累積營收",
+        "prev_ytd": "去年累積營收",
+    },
+]
 
 
-def fetch_single(code: str, typek: str) -> dict | None:
-    now    = datetime.now(TW_TZ)
-    rev_m  = now.month - 1 if now.month > 1 else 12
-    rev_y  = now.year      if now.month > 1 else now.year - 1
-    roc_y  = rev_y - 1911
-
-    body = (
-        f"encodeURIComponent=1&step=1&firstin=1&off=1"
-        f"&TYPEK={typek}&co_id={code}"
-        f"&year={roc_y}&season={rev_m:02d}"
-    )
-    try:
-        html, _ = _post_with_fallback(body)
-        rows = html_to_rows(html)
-        print(f"    [debug] {code} individual rows: {len(rows)}, first: {rows[0][:5] if rows else []}")
-        for row in rows:
-            rec = _parse_individual_row(row)
-            if rec:
-                return rec
-    except Exception as exc:
-        print(f"  [WARN] individual fetch failed {code}/{typek}: {exc}", file=sys.stderr)
+def _detect_tpex_fields(sample: dict) -> dict | None:
+    for fm in _TPEX_FIELD_MAPS:
+        if fm["code"] in sample:
+            return fm
     return None
+
+
+def fetch_tpex() -> dict[str, dict]:
+    print("Fetching 上櫃 (otc) from TPEx OpenAPI ...")
+
+    # Compute ROC year/month for the most recent report month
+    now   = datetime.now(TW_TZ)
+    rev_m = now.month - 1 if now.month > 1 else 12
+    rev_y = now.year      if now.month > 1 else now.year - 1
+    roc_y = rev_y - 1911
+    yearmonth = f"{roc_y}{rev_m:02d}"
+
+    records = None
+    for params in [{"yearmonth": yearmonth}, None]:
+        try:
+            records = _get_json(TPEX_URL, params=params)
+            if records:
+                print(f"  params={params}  total records: {len(records)}")
+                break
+            print(f"  params={params}  → empty, trying next ...")
+        except Exception as exc:
+            print(f"  params={params}  ERROR: {exc}", file=sys.stderr)
+
+    if not records:
+        print("  ✗ TPEx returned no data", file=sys.stderr)
+        return {}
+
+    sample = _normalize_keys(records[0])
+    print(f"  [debug] sample keys: {list(sample.keys())}")
+    print(f"  [debug] sample values: {list(sample.values())[:5]}")
+
+    fm = _detect_tpex_fields(sample)
+    if fm is None:
+        print(f"  ✗ unknown TPEx field layout; keys={list(sample.keys())}", file=sys.stderr)
+        return {}
+
+    result: dict[str, dict] = {}
+    for raw in records:
+        rec = _normalize_keys(raw)
+        code = rec.get(fm["code"], "").strip()
+        if not code:
+            continue
+        result[code] = {
+            "revenue_month":           safe_num(rec.get(fm["month"])),
+            "revenue_prev_month":      safe_num(rec.get(fm["prev_m"])),
+            "revenue_prev_year_month": safe_num(rec.get(fm["prev_y"])),
+            "revenue_ytd":             safe_num(rec.get(fm["ytd"])),
+            "revenue_prev_year_ytd":   safe_num(rec.get(fm["prev_ytd"])),
+        }
+    print(f"  ✓ {len(result)} companies parsed")
+    return result
 
 
 # ─── main ────────────────────────────────────────────────────────────────────
@@ -298,34 +228,26 @@ def main():
     companies = load_companies()
     print(f"Loaded {len(companies)} companies\n")
 
-    # Batch fetch for both market types
     all_data: dict[str, dict] = {}
-    for typek in ("sii", "otc"):
-        label = "上市 (sii)" if typek == "sii" else "上櫃 (otc)"
-        print(f"Fetching batch {label} ...")
-        try:
-            batch = fetch_batch(typek)
-            all_data.update(batch)
-            print(f"  ✓ {len(batch)} companies parsed")
-        except Exception as exc:
-            print(f"  ✗ batch {typek} failed: {exc}", file=sys.stderr)
+
+    try:
+        all_data.update(fetch_twse())
+    except Exception as exc:
+        print(f"  ✗ TWSE fetch failed: {exc}", file=sys.stderr)
 
     print()
 
-    # Build result list
+    try:
+        all_data.update(fetch_tpex())
+    except Exception as exc:
+        print(f"  ✗ TPEx fetch failed: {exc}", file=sys.stderr)
+
+    print()
+
     results = []
     for company in companies:
         code, market = company["code"], company["market"]
         rec = all_data.get(code)
-
-        if rec is None:
-            print(f"  {code} missing from batch → individual query ...")
-            # Try declared market, then opposite
-            for mk in (market, "otc" if market == "sii" else "sii"):
-                rec = fetch_single(code, mk)
-                if rec:
-                    print(f"    ✓ {code} found via individual ({mk})")
-                    break
 
         if rec is None:
             print(f"  [WARN] No data: {code} {company['name_zh']}")
