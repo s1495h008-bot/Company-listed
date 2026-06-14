@@ -1,104 +1,20 @@
 {
-  "updated_at": "2026-06-14T11:45:20.317127+08:00",
+  "updated_at": "2026-06-13T03:25:00+08:00",
   "report_month": "2026-05",
   "companies": [
-    {
-      "code": "9921",
-      "name_zh": "巨大",
-      "name_en": "Giant",
-      "market": "sii",
-      "error": "no_data"
-    },
-    {
-      "code": "9914",
-      "name_zh": "美利達",
-      "name_en": "Merida",
-      "market": "sii",
-      "error": "no_data"
-    },
-    {
-      "code": "8933",
-      "name_zh": "愛地雅",
-      "name_en": "Ideal",
-      "market": "otc",
-      "error": "no_data"
-    },
-    {
-      "code": "6804",
-      "name_zh": "明係",
-      "name_en": "Axman",
-      "market": "otc",
-      "error": "no_data"
-    },
-    {
-      "code": "8163",
-      "name_zh": "達方",
-      "name_en": "Darfon",
-      "market": "otc",
-      "error": "no_data"
-    },
-    {
-      "code": "5306",
-      "name_zh": "桂盟",
-      "name_en": "KMC",
-      "market": "sii",
-      "error": "no_data"
-    },
-    {
-      "code": "1526",
-      "name_zh": "日馳",
-      "name_en": "Sunrace",
-      "market": "sii",
-      "error": "no_data"
-    },
-    {
-      "code": "1517",
-      "name_zh": "利奇",
-      "name_en": "LeeChi",
-      "market": "sii",
-      "error": "no_data"
-    },
-    {
-      "code": "4536",
-      "name_zh": "拓凱",
-      "name_en": "Topkey",
-      "market": "sii",
-      "error": "no_data"
-    },
-    {
-      "code": "2105",
-      "name_zh": "正新",
-      "name_en": "Maxxis",
-      "market": "sii",
-      "error": "no_data"
-    },
-    {
-      "code": "2106",
-      "name_zh": "建大",
-      "name_en": "Kenda",
-      "market": "sii",
-      "error": "no_data"
-    },
-    {
-      "code": "4559",
-      "name_zh": "久裕",
-      "name_en": "JoyTech",
-      "market": "otc",
-      "error": "no_data"
-    },
-    {
-      "code": "8938",
-      "name_zh": "明安",
-      "name_en": "Advanced",
-      "market": "otc",
-      "error": "no_data"
-    },
-    {
-      "code": "5291",
-      "name_zh": "邑昇",
-      "name_en": "EISO",
-      "market": "otc",
-      "error": "no_data"
-    }
+    { "code": "9921", "name_zh": "巨大",  "name_en": "Giant",   "market": "sii", "data_month": "2026-05", "revenue": 5357327, "yoy": 5.8, "mom": -3.4, "ytd_revenue": null, "ytd_yoy": null },
+    { "code": "9914", "name_zh": "美利達","name_en": "Merida",  "market": "sii", "data_month": "2026-05", "revenue": 2285619, "yoy": 18.3, "mom": 4.4, "ytd_revenue": null, "ytd_yoy": null },
+    { "code": "8933", "name_zh": "愛地雅","name_en": "Ideal",   "market": "otc", "error": "no_data" },
+    { "code": "6804", "name_zh": "明係",  "name_en": "Axman",  "market": "otc", "error": "no_data" },
+    { "code": "8163", "name_zh": "達方",  "name_en": "Darfon", "market": "sii", "data_month": "2026-05", "revenue": 2580590, "yoy": 16.4, "mom": -0.4, "ytd_revenue": null, "ytd_yoy": null },
+    { "code": "5306", "name_zh": "桂盟",  "name_en": "KMC",    "market": "sii", "data_month": "2026-05", "revenue": 447549, "yoy": 8.7, "mom": -9.9, "ytd_revenue": null, "ytd_yoy": null },
+    { "code": "1526", "name_zh": "日馳",  "name_en": "Sunrace","market": "sii", "data_month": "2026-05", "revenue": 54615, "yoy": -10.4, "mom": 4.8, "ytd_revenue": null, "ytd_yoy": null },
+    { "code": "1517", "name_zh": "利奇",  "name_en": "LeeChi", "market": "sii", "data_month": "2026-05", "revenue": 190652, "yoy": 32.5, "mom": 10.3, "ytd_revenue": null, "ytd_yoy": null },
+    { "code": "4536", "name_zh": "拓凱",  "name_en": "Topkey", "market": "sii", "data_month": "2026-05", "revenue": 802168, "yoy": 20.7, "mom": -6.8, "ytd_revenue": null, "ytd_yoy": null },
+    { "code": "2105", "name_zh": "正新",  "name_en": "Maxxis", "market": "sii", "data_month": "2026-05", "revenue": 7820448, "yoy": 1.2, "mom": -9.5, "ytd_revenue": null, "ytd_yoy": null },
+    { "code": "2106", "name_zh": "建大",  "name_en": "Kenda",  "market": "sii", "data_month": "2026-05", "revenue": 3029537, "yoy": -2.2, "mom": -10.4, "ytd_revenue": null, "ytd_yoy": null },
+    { "code": "4559", "name_zh": "久裕",  "name_en": "JoyTech","market": "otc", "error": "no_data" },
+    { "code": "8938", "name_zh": "明安",  "name_en": "Advanced","market": "otc", "error": "no_data" },
+    { "code": "5291", "name_zh": "邑昇",  "name_en": "EISO",   "market": "otc", "error": "no_data" }
   ]
 }
