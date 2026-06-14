@@ -144,11 +144,13 @@ def _normalize_keys(record: dict) -> dict:
 # ─── field detection ──────────────────────────────────────────────────────────
 
 FIELD_VARIANTS = {
-    "month":    ["當月營收", "Revenue"],
-    "prev_m":   ["上月營收", "PreviousRevenue"],
-    "prev_y":   ["去年當月營收", "LastYearRevenue"],
-    "ytd":      ["當月累計營收", "當月累積營收", "AccumulatedRevenue"],
-    "prev_ytd": ["去年累計營收", "去年累積營收", "LastYearAccumulatedRevenue"],
+    # Underscore variants = official t187ap05_L field names per TWSE OpenAPI docs
+    # Non-prefixed variants = fallback / TPEx field names
+    "month":    ["營業收入_當月營收",    "當月營收",    "Revenue"],
+    "prev_m":   ["營業收入_上月營收",    "上月營收",    "PreviousRevenue"],
+    "prev_y":   ["營業收入_去年當月營收","去年當月營收","LastYearRevenue"],
+    "ytd":      ["累計營業收入_當月累計營收","當月累計營收","當月累積營收","AccumulatedRevenue"],
+    "prev_ytd": ["累計營業收入_去年累計營收","去年累計營收","去年累積營收","LastYearAccumulatedRevenue"],
 }
 
 
