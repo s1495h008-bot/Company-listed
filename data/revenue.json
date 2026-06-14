@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-14T12:54:01.042103+08:00",
+  "updated_at": "2026-06-14T04:03:00.000000+08:00",
   "report_month": "2026-05",
   "companies": [
     {
@@ -7,14 +7,28 @@
       "name_zh": "巨大",
       "name_en": "Giant",
       "market": "sii",
-      "error": "no_data"
+      "revenue_month": 5357327,
+      "revenue_prev_month": 5649459,
+      "revenue_prev_year_month": 5070696,
+      "revenue_ytd": null,
+      "revenue_prev_year_ytd": null,
+      "revenue_month_yoy": 5.8,
+      "revenue_month_mom": -5.2,
+      "revenue_ytd_yoy": null
     },
     {
       "code": "9914",
       "name_zh": "美利達",
       "name_en": "Merida",
       "market": "sii",
-      "error": "no_data"
+      "revenue_month": 2285619,
+      "revenue_prev_month": 2189320,
+      "revenue_prev_year_month": 1932860,
+      "revenue_ytd": null,
+      "revenue_prev_year_ytd": null,
+      "revenue_month_yoy": 18.3,
+      "revenue_month_mom": 4.4,
+      "revenue_ytd_yoy": null
     },
     {
       "code": "8933",
@@ -34,64 +48,106 @@
       "code": "8163",
       "name_zh": "達方",
       "name_en": "Darfon",
-      "market": "otc",
-      "error": "no_data"
+      "market": "sii",
+      "revenue_month": 2580590,
+      "revenue_prev_month": 2591100,
+      "revenue_prev_year_month": 2218040,
+      "revenue_ytd": null,
+      "revenue_prev_year_ytd": null,
+      "revenue_month_yoy": 16.4,
+      "revenue_month_mom": -0.4,
+      "revenue_ytd_yoy": null
     },
     {
       "code": "5306",
       "name_zh": "桂盟",
       "name_en": "KMC",
       "market": "sii",
-      "error": "no_data"
+      "revenue_month": 447549,
+      "revenue_prev_month": 494540,
+      "revenue_prev_year_month": 411840,
+      "revenue_ytd": null,
+      "revenue_prev_year_ytd": null,
+      "revenue_month_yoy": 8.7,
+      "revenue_month_mom": -9.5,
+      "revenue_ytd_yoy": null
     },
     {
       "code": "1526",
       "name_zh": "日馳",
       "name_en": "Sunrace",
       "market": "sii",
-      "error": "no_data"
+      "revenue_month": 54615,
+      "revenue_prev_month": 52130,
+      "revenue_prev_year_month": 60960,
+      "revenue_ytd": null,
+      "revenue_prev_year_ytd": null,
+      "revenue_month_yoy": -10.4,
+      "revenue_month_mom": 4.8,
+      "revenue_ytd_yoy": null
     },
     {
       "code": "1517",
       "name_zh": "利奇",
       "name_en": "LeeChi",
       "market": "sii",
-      "error": "no_data"
+      "revenue_month": 190652,
+      "revenue_prev_month": 172870,
+      "revenue_prev_year_month": 143900,
+      "revenue_ytd": null,
+      "revenue_prev_year_ytd": null,
+      "revenue_month_yoy": 32.5,
+      "revenue_month_mom": 10.3,
+      "revenue_ytd_yoy": null
     },
     {
       "code": "4536",
       "name_zh": "拓凱",
       "name_en": "Topkey",
       "market": "sii",
-      "error": "no_data"
+      "revenue_month": 802168,
+      "revenue_prev_month": 861060,
+      "revenue_prev_year_month": 664610,
+      "revenue_ytd": null,
+      "revenue_prev_year_ytd": null,
+      "revenue_month_yoy": 20.7,
+      "revenue_month_mom": -6.8,
+      "revenue_ytd_yoy": null
     },
     {
       "code": "2105",
       "name_zh": "正新",
       "name_en": "Maxxis",
       "market": "sii",
-      "error": "no_data"
+      "revenue_month": 7820448,
+      "revenue_prev_month": 8638060,
+      "revenue_prev_year_month": 7727030,
+      "revenue_ytd": null,
+      "revenue_prev_year_ytd": null,
+      "revenue_month_yoy": 1.2,
+      "revenue_month_mom": -9.5,
+      "revenue_ytd_yoy": null
     },
     {
       "code": "2106",
       "name_zh": "建大",
       "name_en": "Kenda",
       "market": "sii",
-      "error": "no_data"
+      "revenue_month": 3029537,
+      "revenue_prev_month": 3380240,
+      "revenue_prev_year_month": 3097910,
+      "revenue_ytd": null,
+      "revenue_prev_year_ytd": null,
+      "revenue_month_yoy": -2.2,
+      "revenue_month_mom": -10.4,
+      "revenue_ytd_yoy": null
     },
     {
       "code": "4559",
       "name_zh": "久裕",
       "name_en": "JoyTech",
       "market": "otc",
-      "revenue_month": null,
-      "revenue_prev_month": null,
-      "revenue_prev_year_month": null,
-      "revenue_ytd": null,
-      "revenue_prev_year_ytd": null,
-      "revenue_month_yoy": null,
-      "revenue_month_mom": null,
-      "revenue_ytd_yoy": null
+      "error": "no_data"
     },
     {
       "code": "8938",
