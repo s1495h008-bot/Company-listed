@@ -2,19 +2,19 @@
   "updated_at": "2026-06-13T03:25:00+08:00",
   "report_month": "2026-05",
   "companies": [
-    { "code": "9921", "name_zh": "巨大",  "name_en": "Giant",   "market": "sii", "data_month": "2026-05", "revenue": 5357327, "yoy": 5.8, "mom": -3.4, "ytd_revenue": null, "ytd_yoy": null },
-    { "code": "9914", "name_zh": "美利達","name_en": "Merida",  "market": "sii", "data_month": "2026-05", "revenue": 2285619, "yoy": 18.3, "mom": 4.4, "ytd_revenue": null, "ytd_yoy": null },
-    { "code": "8933", "name_zh": "愛地雅","name_en": "Ideal",   "market": "otc", "error": "no_data" },
-    { "code": "6804", "name_zh": "明係",  "name_en": "Axman",  "market": "otc", "error": "no_data" },
-    { "code": "8163", "name_zh": "達方",  "name_en": "Darfon", "market": "sii", "data_month": "2026-05", "revenue": 2580590, "yoy": 16.4, "mom": -0.4, "ytd_revenue": null, "ytd_yoy": null },
-    { "code": "5306", "name_zh": "桂盟",  "name_en": "KMC",    "market": "sii", "data_month": "2026-05", "revenue": 447549, "yoy": 8.7, "mom": -9.9, "ytd_revenue": null, "ytd_yoy": null },
-    { "code": "1526", "name_zh": "日馳",  "name_en": "Sunrace","market": "sii", "data_month": "2026-05", "revenue": 54615, "yoy": -10.4, "mom": 4.8, "ytd_revenue": null, "ytd_yoy": null },
-    { "code": "1517", "name_zh": "利奇",  "name_en": "LeeChi", "market": "sii", "data_month": "2026-05", "revenue": 190652, "yoy": 32.5, "mom": 10.3, "ytd_revenue": null, "ytd_yoy": null },
-    { "code": "4536", "name_zh": "拓凱",  "name_en": "Topkey", "market": "sii", "data_month": "2026-05", "revenue": 802168, "yoy": 20.7, "mom": -6.8, "ytd_revenue": null, "ytd_yoy": null },
-    { "code": "2105", "name_zh": "正新",  "name_en": "Maxxis", "market": "sii", "data_month": "2026-05", "revenue": 7820448, "yoy": 1.2, "mom": -9.5, "ytd_revenue": null, "ytd_yoy": null },
-    { "code": "2106", "name_zh": "建大",  "name_en": "Kenda",  "market": "sii", "data_month": "2026-05", "revenue": 3029537, "yoy": -2.2, "mom": -10.4, "ytd_revenue": null, "ytd_yoy": null },
-    { "code": "4559", "name_zh": "久裕",  "name_en": "JoyTech","market": "otc", "error": "no_data" },
+    { "code": "9921", "name_zh": "巨大",  "name_en": "Giant",    "market": "sii", "revenue_month": 5357327, "revenue_month_yoy": 5.8,  "revenue_month_mom": -3.4,  "revenue_ytd": null, "revenue_ytd_yoy": null },
+    { "code": "9914", "name_zh": "美利達","name_en": "Merida",   "market": "sii", "revenue_month": 2285619, "revenue_month_yoy": 18.3, "revenue_month_mom": 4.4,   "revenue_ytd": null, "revenue_ytd_yoy": null },
+    { "code": "8933", "name_zh": "愛地雅","name_en": "Ideal",    "market": "otc", "error": "no_data" },
+    { "code": "6804", "name_zh": "明係",  "name_en": "Axman",   "market": "otc", "error": "no_data" },
+    { "code": "8163", "name_zh": "達方",  "name_en": "Darfon",  "market": "sii", "revenue_month": 2580590, "revenue_month_yoy": 16.4, "revenue_month_mom": -0.4,  "revenue_ytd": null, "revenue_ytd_yoy": null },
+    { "code": "5306", "name_zh": "桂盟",  "name_en": "KMC",     "market": "sii", "revenue_month": 447549,  "revenue_month_yoy": 8.7,  "revenue_month_mom": -9.9,  "revenue_ytd": null, "revenue_ytd_yoy": null },
+    { "code": "1526", "name_zh": "日馳",  "name_en": "Sunrace", "market": "sii", "revenue_month": 54615,   "revenue_month_yoy": -10.4,"revenue_month_mom": 4.8,   "revenue_ytd": null, "revenue_ytd_yoy": null },
+    { "code": "1517", "name_zh": "利奇",  "name_en": "LeeChi",  "market": "sii", "revenue_month": 190652,  "revenue_month_yoy": 32.5, "revenue_month_mom": 10.3,  "revenue_ytd": null, "revenue_ytd_yoy": null },
+    { "code": "4536", "name_zh": "拓凱",  "name_en": "Topkey",  "market": "sii", "revenue_month": 802168,  "revenue_month_yoy": 20.7, "revenue_month_mom": -6.8,  "revenue_ytd": null, "revenue_ytd_yoy": null },
+    { "code": "2105", "name_zh": "正新",  "name_en": "Maxxis",  "market": "sii", "revenue_month": 7820448, "revenue_month_yoy": 1.2,  "revenue_month_mom": -9.5,  "revenue_ytd": null, "revenue_ytd_yoy": null },
+    { "code": "2106", "name_zh": "建大",  "name_en": "Kenda",   "market": "sii", "revenue_month": 3029537, "revenue_month_yoy": -2.2, "revenue_month_mom": -10.4, "revenue_ytd": null, "revenue_ytd_yoy": null },
+    { "code": "4559", "name_zh": "久裕",  "name_en": "JoyTech", "market": "otc", "error": "no_data" },
     { "code": "8938", "name_zh": "明安",  "name_en": "Advanced","market": "otc", "error": "no_data" },
-    { "code": "5291", "name_zh": "邑昇",  "name_en": "EISO",   "market": "otc", "error": "no_data" }
+    { "code": "5291", "name_zh": "邑昇",  "name_en": "EISO",    "market": "otc", "error": "no_data" }
   ]
 }
