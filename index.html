@@ -296,16 +296,17 @@ function renderTable() {
       ? `<span class="data-month">${monthLbl}</span>`
       : '';
     if (c.error) {
-      const mopsLink = `<a class="mops-link" href="${revenueUrl(c.code)}" target="_blank" rel="noopener">` +
+      // OTC companies: show label + Yahoo link
+      // Listed companies with no data: show dashes (transient; shouldn't happen if API works)
+      const isOtc = c.market === 'otc';
+      const yahooLink = `<a class="mops-link" href="${revenueUrl(c.code)}" target="_blank" rel="noopener">` +
         `<span class="zh">Yahoo 股市查詢 ↗</span><span class="en">View Revenue ↗</span></a>`;
+      const noDataCell = isOtc
+        ? `<td colspan="4" class="nd"><span class="zh">無資料（上櫃）</span><span class="en">No data (OTC)</span> ${yahooLink}</td><td></td>`
+        : `<td class="nd">—</td><td class="nd">—</td><td class="nd">—</td><td class="nd">—</td><td class="nd">—</td>`;
       tr.innerHTML = `<td>${c.code}</td>
         <td>${c.name_zh} <span class="en-name en">${c.name_en}</span></td>
-        <td colspan="4" class="nd">
-          <span class="zh">無資料（上櫃）</span>
-          <span class="en">No data (OTC)</span>
-          ${mopsLink}
-        </td>
-        <td></td>`;
+        ${noDataCell}`;
     } else {
       tr.innerHTML = `
         <td>${c.code}</td>
