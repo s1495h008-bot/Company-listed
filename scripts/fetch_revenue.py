@@ -53,8 +53,8 @@ WATCH_CODES = {"8933", "6804", "4559", "8938", "5291"}
 
 # CORS proxies tried in order; None = direct (no proxy)
 PROXIES = [
-    "corsproxy",
-    "allorigins",
+    "codetabs",
+    "thingproxy",
     None,
 ]
 
@@ -62,11 +62,11 @@ PROXIES = [
 def _proxy_url(target: str, proxy: str | None) -> str:
     if proxy is None:
         return target
-    enc = urllib.parse.quote(target, safe="")
-    if proxy == "corsproxy":
-        return f"https://corsproxy.io/?url={enc}"
-    if proxy == "allorigins":
-        return f"https://api.allorigins.win/raw?url={enc}"
+    if proxy == "codetabs":
+        enc = urllib.parse.quote(target, safe="")
+        return f"https://api.codetabs.com/v1/proxy?quest={enc}"
+    if proxy == "thingproxy":
+        return f"https://thingproxy.freeboard.io/fetch/{target}"
     return target
 
 
