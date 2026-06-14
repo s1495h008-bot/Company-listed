@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-13T23:49:41.224523+08:00",
+  "updated_at": "2026-06-14T10:27:12.467237+08:00",
   "report_month": "2026-05",
   "companies": [
     {
@@ -146,7 +146,7 @@
       "code": "4559",
       "name_zh": "久裕",
       "name_en": "JoyTech",
-      "market": "sii",
+      "market": "otc",
       "error": "no_data"
     },
     {
