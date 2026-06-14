@@ -95,6 +95,45 @@ jobs:
                   print(f"  {code}: NOT FOUND in any TPEx endpoint/proxy")
           PYEOF
 
+      # ── Debug: can we scrape Yahoo Finance revenue page? ─────────────────
+      - name: Debug Yahoo Finance revenue page (8933)
+        run: |
+          python3 - <<'PYEOF'
+          import requests, sys
+
+          TARGET = "https://tw.stock.yahoo.com/quote/8933/revenue"
+          NEEDLE = "250,814"   # 8933 愛地雅 2026/05 當月營收（仟元）
+          UA_BROWSER = (
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+              "AppleWebKit/537.36 (KHTML, like Gecko) "
+              "Chrome/124.0.0.0 Safari/537.36"
+          )
+
+          for ua_label, ua in [
+              ("browser-UA", UA_BROWSER),
+              ("python-requests", "python-requests/2.31"),
+          ]:
+              print(f"\n── {ua_label} ──")
+              try:
+                  r = requests.get(TARGET, headers={
+                      "User-Agent": ua,
+                      "Accept": "text/html,application/xhtml+xml,*/*;q=0.9",
+                      "Accept-Language": "zh-TW,zh;q=0.9",
+                  }, timeout=20, allow_redirects=True)
+                  print(f"status={r.status_code}  final_url={r.url}  len={len(r.text)}")
+                  snippet = r.text[:2000]
+                  print("─── first 2000 chars ───")
+                  print(snippet)
+                  print("─── end snippet ───")
+                  found = NEEDLE in r.text
+                  print(f"Contains '{NEEDLE}': {found}")
+                  if found:
+                      idx = r.text.index(NEEDLE)
+                      print(f"Context: ...{r.text[max(0,idx-80):idx+80]}...")
+              except Exception as e:
+                  print(f"ERROR: {e}", file=sys.stderr)
+          PYEOF
+
       # ── Main fetch ────────────────────────────────────────────────────────
       - name: Fetch revenue data
         run: python scripts/fetch_revenue.py
