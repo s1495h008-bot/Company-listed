@@ -145,12 +145,22 @@ def _normalize_keys(record: dict) -> dict:
 
 FIELD_VARIANTS = {
     # Underscore variants = official t187ap05_L field names per TWSE OpenAPI docs
-    # Non-prefixed variants = fallback / TPEx field names
+    # Multiple candidates because the trailing 營收 / 累計 suffix varies across API versions
     "month":    ["營業收入_當月營收",    "當月營收",    "Revenue"],
     "prev_m":   ["營業收入_上月營收",    "上月營收",    "PreviousRevenue"],
     "prev_y":   ["營業收入_去年當月營收","去年當月營收","LastYearRevenue"],
-    "ytd":      ["累計營業收入_當月累計營收","當月累計營收","當月累積營收","AccumulatedRevenue"],
-    "prev_ytd": ["累計營業收入_去年累計營收","去年累計營收","去年累積營收","LastYearAccumulatedRevenue"],
+    "ytd":      [
+        "累計營業收入_當月累計營收",  # confirmed TWSE doc name
+        "累計營業收入_當月累計",
+        "累計營業收入_本年累計",
+        "當月累計營收", "當月累積營收", "AccumulatedRevenue",
+    ],
+    "prev_ytd": [
+        "累計營業收入_去年累計營收",
+        "累計營業收入_去年累計",
+        "累計營業收入_去年同期",
+        "去年累計營收", "去年累積營收", "LastYearAccumulatedRevenue",
+    ],
 }
 
 
@@ -165,7 +175,11 @@ def _parse_records(records: list[dict], label: str) -> dict[str, dict]:
     if not records:
         return {}
     sample = _normalize_keys(records[0])
-    print(f"  [debug] {label} keys: {list(sample.keys())[:8]}")
+    print(f"  [debug] {label} ALL keys: {list(sample.keys())}")
+    # Confirm which YTD variant matched
+    ytd_hit = next((k for k in FIELD_VARIANTS["ytd"] if k in sample), None)
+    prevytd_hit = next((k for k in FIELD_VARIANTS["prev_ytd"] if k in sample), None)
+    print(f"  [debug] ytd field matched: {ytd_hit!r}  prev_ytd matched: {prevytd_hit!r}")
 
     result: dict[str, dict] = {}
     for raw in records:

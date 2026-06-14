@@ -274,9 +274,9 @@ function dataMonthLabel(reportMonth) {
   return LANG === 'zh' ? `${y}年${mi}月` : `${MN[mi] || m} ${y}`;
 }
 
-// MOPS monthly revenue query URL for a specific company (opens in new tab)
-function mopsUrl(code) {
-  return `https://mops.twse.com.tw/mops/web/t05st10_ifrs?TYPEK=otc&co_id=${code}`;
+// Yahoo Finance individual stock revenue page — works for both listed and OTC
+function revenueUrl(code) {
+  return `https://tw.stock.yahoo.com/quote/${code}/revenue`;
 }
 
 // ─── render table ─────────────────────────────────────────────────────────────
@@ -296,8 +296,8 @@ function renderTable() {
       ? `<span class="data-month">${monthLbl}</span>`
       : '';
     if (c.error) {
-      const mopsLink = `<a class="mops-link" href="${mopsUrl(c.code)}" target="_blank" rel="noopener">` +
-        `<span class="zh">前往查詢 ↗</span><span class="en">View on MOPS ↗</span></a>`;
+      const mopsLink = `<a class="mops-link" href="${revenueUrl(c.code)}" target="_blank" rel="noopener">` +
+        `<span class="zh">Yahoo 股市查詢 ↗</span><span class="en">View Revenue ↗</span></a>`;
       tr.innerHTML = `<td>${c.code}</td>
         <td>${c.name_zh} <span class="en-name en">${c.name_en}</span></td>
         <td colspan="4" class="nd">
@@ -464,8 +464,10 @@ const FIELD_VARIANTS = {
   month:    ['營業收入_當月營收',    '當月營收',    'Revenue'],
   prev_m:   ['營業收入_上月營收',    '上月營收',    'PreviousRevenue'],
   prev_y:   ['營業收入_去年當月營收','去年當月營收','LastYearRevenue'],
-  ytd:      ['累計營業收入_當月累計營收','當月累計營收','當月累積營收','AccumulatedRevenue'],
-  prev_ytd: ['累計營業收入_去年累計營收','去年累計營收','去年累積營收','LastYearAccumulatedRevenue'],
+  ytd:      ['累計營業收入_當月累計營收','累計營業收入_當月累計','累計營業收入_本年累計',
+             '當月累計營收','當月累積營收','AccumulatedRevenue'],
+  prev_ytd: ['累計營業收入_去年累計營收','累計營業收入_去年累計','累計營業收入_去年同期',
+             '去年累計營收','去年累積營收','LastYearAccumulatedRevenue'],
 };
 
 function pickField(rec, variants) {
