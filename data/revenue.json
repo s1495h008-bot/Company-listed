@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-14T11:07:08.953630+08:00",
+  "updated_at": "2026-06-14T11:17:36.417937+08:00",
   "report_month": "2026-05",
   "companies": [
     {
@@ -7,28 +7,14 @@
       "name_zh": "巨大",
       "name_en": "Giant",
       "market": "sii",
-      "revenue_month": 5357327.0,
-      "revenue_prev_month": 5547234.0,
-      "revenue_prev_year_month": 5062970.0,
-      "revenue_ytd": null,
-      "revenue_prev_year_ytd": null,
-      "revenue_month_yoy": 5.81,
-      "revenue_month_mom": -3.42,
-      "revenue_ytd_yoy": null
+      "error": "no_data"
     },
     {
       "code": "9914",
       "name_zh": "美利達",
       "name_en": "Merida",
       "market": "sii",
-      "revenue_month": 2285619.0,
-      "revenue_prev_month": 2189332.0,
-      "revenue_prev_year_month": 1931389.0,
-      "revenue_ytd": null,
-      "revenue_prev_year_ytd": null,
-      "revenue_month_yoy": 18.34,
-      "revenue_month_mom": 4.4,
-      "revenue_ytd_yoy": null
+      "error": "no_data"
     },
     {
       "code": "8933",
@@ -49,98 +35,49 @@
       "name_zh": "達方",
       "name_en": "Darfon",
       "market": "otc",
-      "revenue_month": 2580590.0,
-      "revenue_prev_month": 2591600.0,
-      "revenue_prev_year_month": 2216803.0,
-      "revenue_ytd": null,
-      "revenue_prev_year_ytd": null,
-      "revenue_month_yoy": 16.41,
-      "revenue_month_mom": -0.42,
-      "revenue_ytd_yoy": null
+      "error": "no_data"
     },
     {
       "code": "5306",
       "name_zh": "桂盟",
       "name_en": "KMC",
       "market": "sii",
-      "revenue_month": 447549.0,
-      "revenue_prev_month": 497012.0,
-      "revenue_prev_year_month": 411606.0,
-      "revenue_ytd": null,
-      "revenue_prev_year_ytd": null,
-      "revenue_month_yoy": 8.73,
-      "revenue_month_mom": -9.95,
-      "revenue_ytd_yoy": null
+      "error": "no_data"
     },
     {
       "code": "1526",
       "name_zh": "日馳",
       "name_en": "Sunrace",
       "market": "sii",
-      "revenue_month": 54615.0,
-      "revenue_prev_month": 52119.0,
-      "revenue_prev_year_month": 60977.0,
-      "revenue_ytd": null,
-      "revenue_prev_year_ytd": null,
-      "revenue_month_yoy": -10.43,
-      "revenue_month_mom": 4.79,
-      "revenue_ytd_yoy": null
+      "error": "no_data"
     },
     {
       "code": "1517",
       "name_zh": "利奇",
       "name_en": "LeeChi",
       "market": "sii",
-      "revenue_month": 190652.0,
-      "revenue_prev_month": 172836.0,
-      "revenue_prev_year_month": 143862.0,
-      "revenue_ytd": null,
-      "revenue_prev_year_ytd": null,
-      "revenue_month_yoy": 32.52,
-      "revenue_month_mom": 10.31,
-      "revenue_ytd_yoy": null
+      "error": "no_data"
     },
     {
       "code": "4536",
       "name_zh": "拓凱",
       "name_en": "Topkey",
       "market": "sii",
-      "revenue_month": 802168.0,
-      "revenue_prev_month": 860700.0,
-      "revenue_prev_year_month": 664580.0,
-      "revenue_ytd": null,
-      "revenue_prev_year_ytd": null,
-      "revenue_month_yoy": 20.7,
-      "revenue_month_mom": -6.8,
-      "revenue_ytd_yoy": null
+      "error": "no_data"
     },
     {
       "code": "2105",
       "name_zh": "正新",
       "name_en": "Maxxis",
       "market": "sii",
-      "revenue_month": 7820448.0,
-      "revenue_prev_month": 8639892.0,
-      "revenue_prev_year_month": 7725964.0,
-      "revenue_ytd": null,
-      "revenue_prev_year_ytd": null,
-      "revenue_month_yoy": 1.22,
-      "revenue_month_mom": -9.48,
-      "revenue_ytd_yoy": null
+      "error": "no_data"
     },
     {
       "code": "2106",
       "name_zh": "建大",
       "name_en": "Kenda",
       "market": "sii",
-      "revenue_month": 3029537.0,
-      "revenue_prev_month": 3379609.0,
-      "revenue_prev_year_month": 3097890.0,
-      "revenue_ytd": null,
-      "revenue_prev_year_ytd": null,
-      "revenue_month_yoy": -2.21,
-      "revenue_month_mom": -10.36,
-      "revenue_ytd_yoy": null
+      "error": "no_data"
     },
     {
       "code": "4559",
