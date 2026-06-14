@@ -1,9 +1,9 @@
 name: Fetch Monthly Revenue
 
 on:
-  # 台灣時間每月 12 日上午 09:00 = UTC 01:00
+  # 台灣時間每天上午 09:00 = UTC 01:00
   schedule:
-    - cron: "0 1 12 * *"
+    - cron: "0 1 * * *"
   # 手動觸發備案
   workflow_dispatch:
 
@@ -25,76 +25,74 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      # ── Debug: test proxy access + find missing companies ────────────────
-      - name: Debug proxy access and find missing companies
+      # ── Debug: exhaustive TPEx proxy × endpoint matrix ───────────────────
+      - name: Debug TPEx proxy and endpoint matrix
         run: |
           python3 - <<'PYEOF'
           import requests, json, sys, urllib.parse
 
           UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
           hdrs = {"User-Agent": UA, "Accept": "application/json, */*", "Accept-Language": "zh-TW,zh;q=0.9"}
-          WATCH = {"8933","6804","4559","8938","5291"}  # companies still missing
+          WATCH = {"8933", "6804", "4559", "8938", "5291"}
 
           def enc(u): return urllib.parse.quote(u, safe="")
 
-          def fetch_records(target):
-              """Try corsproxy then allorigins then direct; return (records, proxy_used)."""
-              for label, url in [
-                  ("corsproxy",  f"https://corsproxy.io/?url={enc(target)}"),
-                  ("allorigins", f"https://api.allorigins.win/raw?url={enc(target)}"),
-                  ("direct",     target),
-              ]:
+          TPEX_TARGETS = [
+              ("t187ap05_O", "https://www.tpex.org.tw/openapi/v1/t187ap05_O"),
+              ("t187ap05_R", "https://www.tpex.org.tw/openapi/v1/t187ap05_R"),
+              ("tpex_monthly_revenue", "https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue"),
+          ]
+
+          def proxy_variants(target):
+              return [
+                  ("direct",    target),
+                  ("corsproxy", f"https://corsproxy.io/?url={enc(target)}"),
+                  ("allorigins",f"https://api.allorigins.win/raw?url={enc(target)}"),
+              ]
+
+          def parse_records(raw_list):
+              code_map = {}
+              for rec in raw_list:
+                  code = str(rec.get("公司代號") or rec.get("CompanyID","")).strip()
+                  if code: code_map[code] = {k.strip(): v for k, v in rec.items()}
+              return code_map
+
+          print("=" * 60)
+          print("TPEx endpoint × proxy matrix (looking for 8933 = 250,814 仟元)")
+          print("=" * 60)
+
+          best = {}
+          for ep_name, target in TPEX_TARGETS:
+              print(f"\n── {ep_name} ──")
+              for proxy_name, url in proxy_variants(target):
                   try:
                       r = requests.get(url, headers=hdrs, timeout=30)
                       if r.status_code != 200:
-                          print(f"  [{label}] status={r.status_code}", file=sys.stderr)
+                          print(f"  [{proxy_name}] HTTP {r.status_code}  body={r.text[:120]}")
                           continue
                       data = r.json()
                       recs = data if isinstance(data, list) else data.get("data") or data.get("contents") or []
                       if isinstance(recs, str): recs = json.loads(recs)
+                      print(f"  [{proxy_name}] OK  records={len(recs)}  keys={list({k.strip() for k in (recs[0].keys() if recs else [])})[: 6]}")
                       if recs:
-                          return recs, label
-                      print(f"  [{label}] empty response", file=sys.stderr)
+                          code_map = parse_records(recs)
+                          found = WATCH & set(code_map)
+                          print(f"    watch codes found: {sorted(found)}")
+                          for c in sorted(found):
+                              rev = code_map[c].get("當月營收") or code_map[c].get("Revenue","?")
+                              print(f"    {c} 當月營收={rev}")
+                              best[c] = (ep_name, proxy_name, rev)
                   except Exception as e:
-                      print(f"  [{label}] {e}", file=sys.stderr)
-              return [], "none"
+                      print(f"  [{proxy_name}] ERROR: {e}")
 
-          def check_endpoint(name, target):
-              print(f"\n=== {name} ===")
-              recs, via = fetch_records(target)
-              if not recs:
-                  print(f"  FAILED — no data from any proxy")
-                  return {}
-              sample = {k.strip(): v for k, v in recs[0].items()}
-              print(f"  via={via}  records={len(recs)}  keys={list(sample.keys())[:6]}")
-              code_map = {}
-              for rec in recs:
-                  code = str(rec.get("公司代號") or rec.get("CompanyID","")).strip()
-                  if code: code_map[code] = rec
-              found = WATCH & set(code_map)
-              missing = WATCH - set(code_map)
-              print(f"  watch codes FOUND: {sorted(found)}")
-              print(f"  watch codes MISSING: {sorted(missing)}")
-              for c in sorted(found):
-                  norm = {k.strip(): v for k, v in code_map[c].items()}
-                  rev = norm.get("當月營收") or norm.get("Revenue","")
-                  print(f"    {c} 當月營收={rev}")
-              if "9921" in code_map:
-                  norm = {k.strip(): v for k, v in code_map["9921"].items()}
-                  print(f"  9921 當月營收={norm.get('當月營收','')}  (expect ~5357327)")
-              return code_map
-
-          all_found = {}
-          all_found.update(check_endpoint("TWSE t187ap05_L (上市)",  "https://openapi.twse.com.tw/v1/opendata/t187ap05_L"))
-          all_found.update(check_endpoint("TWSE t187ap05_R (上市興櫃)", "https://openapi.twse.com.tw/v1/opendata/t187ap05_R"))
-          all_found.update(check_endpoint("TPEx t187ap05_O (上櫃)",  "https://www.tpex.org.tw/openapi/v1/t187ap05_O"))
-          all_found.update(check_endpoint("TPEx t187ap05_R (興櫃)",  "https://www.tpex.org.tw/openapi/v1/t187ap05_R"))
-          all_found.update(check_endpoint("TPEx tpex_monthly_revenue", "https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue"))
-
-          print(f"\n=== Summary ===")
-          still_missing = WATCH - set(all_found)
-          print(f"watch codes found across all endpoints: {sorted(WATCH & set(all_found))}")
-          print(f"watch codes NOT found anywhere: {sorted(still_missing)}")
+          print(f"\n{'='*60}")
+          print(f"Best source for each watch code:")
+          for code in sorted(WATCH):
+              if code in best:
+                  ep, px, rev = best[code]
+                  print(f"  {code}: {ep} via {px}  當月營收={rev}")
+              else:
+                  print(f"  {code}: NOT FOUND in any TPEx endpoint/proxy")
           PYEOF
 
       # ── Main fetch ────────────────────────────────────────────────────────

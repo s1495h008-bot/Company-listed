@@ -103,6 +103,12 @@
     display: inline-block; font-size: .68rem; font-weight: 600; padding: 2px 7px;
     border-radius: 10px; vertical-align: middle; margin-left: 6px;
   }
+  .data-month { display: block; font-size: .68rem; font-weight: 400; color: var(--muted); margin-top: 1px; }
+  .mops-link {
+    margin-left: 8px; font-size: .74rem; color: var(--accent);
+    text-decoration: none; white-space: nowrap;
+  }
+  .mops-link:hover { text-decoration: underline; }
   .badge-live   { background: #eafaf1; color: var(--pos); border: 1px solid #a3e4b7; }
   .badge-cached { background: #fff8e6; color: #b7791f;  border: 1px solid #f6c96e; }
   .badge-err    { background: var(--neg-bg); color: var(--neg); border: 1px solid #fab1b1; }
@@ -260,6 +266,19 @@ function fmtPct(pct) {
   return { html: `<span class="pct ${cls}">${txt}</span>`, plain: txt };
 }
 
+// ─── data month label ─────────────────────────────────────────────────────────
+function dataMonthLabel(reportMonth) {
+  if (!reportMonth) return '';
+  const [y, m] = reportMonth.split('-');
+  const mi = parseInt(m, 10);
+  return LANG === 'zh' ? `${y}年${mi}月` : `${MN[mi] || m} ${y}`;
+}
+
+// MOPS monthly revenue query URL for a specific company (opens in new tab)
+function mopsUrl(code) {
+  return `https://mops.twse.com.tw/mops/web/t05st10_ifrs?TYPEK=otc&co_id=${code}`;
+}
+
 // ─── render table ─────────────────────────────────────────────────────────────
 function renderTable() {
   if (!DATA) return;
@@ -269,17 +288,28 @@ function renderTable() {
 
   const tbody = document.getElementById('table-body');
   tbody.innerHTML = '';
+  const monthLbl = dataMonthLabel(DATA.report_month);
 
   for (const c of DATA.companies) {
     const tr = document.createElement('tr');
+    const monthTag = monthLbl
+      ? `<span class="data-month">${monthLbl}</span>`
+      : '';
     if (c.error) {
+      const mopsLink = `<a class="mops-link" href="${mopsUrl(c.code)}" target="_blank" rel="noopener">` +
+        `<span class="zh">前往查詢 ↗</span><span class="en">View on MOPS ↗</span></a>`;
       tr.innerHTML = `<td>${c.code}</td>
-        <td>${c.name_zh} <span class="en-name">${c.name_en}</span></td>
-        <td colspan="5" class="nd">${LANG === 'zh' ? '無資料' : 'No data'}</td>`;
+        <td>${c.name_zh} <span class="en-name en">${c.name_en}</span></td>
+        <td colspan="4" class="nd">
+          <span class="zh">無資料（上櫃）</span>
+          <span class="en">No data (OTC)</span>
+          ${mopsLink}
+        </td>
+        <td></td>`;
     } else {
       tr.innerHTML = `
         <td>${c.code}</td>
-        <td>${c.name_zh} <span class="en-name en">${c.name_en}</span></td>
+        <td>${c.name_zh} <span class="en-name en">${c.name_en}</span>${monthTag}</td>
         <td>${fmtNum(c.revenue_month, UNIT)}</td>
         <td>${fmtPct(c.revenue_month_yoy).html}</td>
         <td>${fmtPct(c.revenue_month_mom).html}</td>
@@ -429,13 +459,13 @@ function proxyUrls(target) {
   ];
 }
 
-// Possible field name variants across API versions
+// Field name variants — underscore prefix = official TWSE t187ap05_L names per API docs
 const FIELD_VARIANTS = {
-  month:    ['當月營收', 'Revenue'],
-  prev_m:   ['上月營收', 'PreviousRevenue'],
-  prev_y:   ['去年當月營收', 'LastYearRevenue'],
-  ytd:      ['當月累計營收', '當月累積營收', 'AccumulatedRevenue'],
-  prev_ytd: ['去年累計營收', '去年累積營收', 'LastYearAccumulatedRevenue'],
+  month:    ['營業收入_當月營收',    '當月營收',    'Revenue'],
+  prev_m:   ['營業收入_上月營收',    '上月營收',    'PreviousRevenue'],
+  prev_y:   ['營業收入_去年當月營收','去年當月營收','LastYearRevenue'],
+  ytd:      ['累計營業收入_當月累計營收','當月累計營收','當月累積營收','AccumulatedRevenue'],
+  prev_ytd: ['累計營業收入_去年累計營收','去年累計營收','去年累積營收','LastYearAccumulatedRevenue'],
 };
 
 function pickField(rec, variants) {
