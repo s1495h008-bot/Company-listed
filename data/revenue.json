@@ -6,7 +6,7 @@
     { "code": "9914", "name_zh": "美利達", "name_en": "Merida",   "market": "sii", "error": "no_data" },
     { "code": "8933", "name_zh": "愛地雅", "name_en": "Ideal",    "market": "otc", "error": "no_data" },
     { "code": "6804", "name_zh": "明係",  "name_en": "Axman",    "market": "otc", "error": "no_data" },
-    { "code": "8163", "name_zh": "達方",  "name_en": "Darfon",   "market": "otc", "error": "no_data" },
+    { "code": "8163", "name_zh": "達方",  "name_en": "Darfon",   "market": "sii", "error": "no_data" },
     { "code": "5306", "name_zh": "桂盟",  "name_en": "KMC",      "market": "sii", "error": "no_data" },
     { "code": "1526", "name_zh": "日馳",  "name_en": "Sunrace",  "market": "sii", "error": "no_data" },
     { "code": "1517", "name_zh": "利奇",  "name_en": "LeeChi",   "market": "sii", "error": "no_data" },
