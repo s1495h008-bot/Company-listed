@@ -1,22 +1,6 @@
 #!/usr/bin/env python3
 """
 Fetch monthly revenue from TWSE/TPEx OpenAPIs via CORS proxy.
-
-Direct access to openapi.twse.com.tw / tpex.org.tw is blocked for
-GitHub Actions IPs by WAF. Route requests through public CORS proxies
-whose IPs are not on the blocklist.
-
-Sources:
-  上市 (sii): https://openapi.twse.com.tw/v1/opendata/t187ap05_L
-  上櫃 (otc): https://www.tpex.org.tw/openapi/v1/t187ap05_O  (fallback: tpex_monthly_revenue)
-
-Proxy chain (tried in order until one succeeds):
-  1. corsproxy.io   — ?url=<encoded>
-  2. allorigins.win — /raw?url=<encoded>
-  3. Direct (no proxy) — works if run locally or from non-blocked IP
-
-All revenue values are in 仟元 (thousands NTD).
-Validation: 9921 巨大 當月營收 ≈ 5,357,327 仟元 (2026/05)
 """
 
 import json
@@ -40,18 +24,15 @@ UA = (
 
 TWSE_URL = "https://openapi.twse.com.tw/v1/opendata/t187ap05_L"
 TPEX_URLS = [
-    "https://www.tpex.org.tw/openapi/v1/t187ap05_O",        # 上櫃
-    "https://www.tpex.org.tw/openapi/v1/t187ap05_R",        # 興櫃 (rotc)
-    "https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue",  # fallback
+    "https://www.tpex.org.tw/openapi/v1/t187ap05_O",
+    "https://www.tpex.org.tw/openapi/v1/t187ap05_R",
+    "https://www.tpex.org.tw/openapi/v1/tpex_monthly_revenue",
 ]
-# sii companies sometimes listed on TWSE emerging board — try this too
 TWSE_URLS_EXTRA = [
-    "https://openapi.twse.com.tw/v1/opendata/t187ap05_R",   # 上市興櫃
+    "https://openapi.twse.com.tw/v1/opendata/t187ap05_R",
 ]
-# Companies known to be missing; used to print targeted debug
 WATCH_CODES = {"8933", "6804", "4559", "8938", "5291"}
 
-# CORS proxies tried in order; None = direct (no proxy)
 PROXIES = [
     "cloudflare",
     None,
@@ -66,8 +47,6 @@ def _proxy_url(target: str, proxy: str | None) -> str:
         return f"https://silent-bonus-fc0a.s1495h008.workers.dev/?url={enc}"
     return target
 
-
-# ─── utilities ───────────────────────────────────────────────────────────────
 
 def load_companies():
     with open(COMPANIES_FILE, encoding="utf-8") as f:
@@ -99,10 +78,7 @@ def infer_report_month() -> str:
     return f"{now.year}-{now.month - 1:02d}"
 
 
-# ─── API fetch helpers ────────────────────────────────────────────────────────
-
 def _get_json(target_url: str, retries: int = 2) -> list[dict]:
-    """Try each proxy in turn until we get a non-empty JSON list."""
     headers = {
         "User-Agent": UA,
         "Accept": "application/json, */*",
@@ -118,7 +94,6 @@ def _get_json(target_url: str, retries: int = 2) -> list[dict]:
                 r.raise_for_status()
                 data = r.json()
                 records = data if isinstance(data, list) else data.get("data") or data.get("contents") or []
-                # allorigins wraps in {"contents": "<json string>"}
                 if isinstance(records, str):
                     records = json.loads(records)
                 if not records:
@@ -130,7 +105,6 @@ def _get_json(target_url: str, retries: int = 2) -> list[dict]:
                 if attempt < retries - 1:
                     time.sleep(2)
         print(f"  ✗ [{proxy_label}] {last_exc}", file=sys.stderr)
-
     raise RuntimeError(f"All proxies failed for {target_url}. Last: {last_exc}")
 
 
@@ -138,19 +112,19 @@ def _normalize_keys(record: dict) -> dict:
     return {k.strip(): (v.strip() if isinstance(v, str) else v) for k, v in record.items()}
 
 
-# ─── field detection ──────────────────────────────────────────────────────────
-
 FIELD_VARIANTS = {
-    "month":    ["營業收入_當月營收",    "當月營收",    "Revenue"],
-    "prev_m":   ["營業收入_上月營收",    "上月營收",    "PreviousRevenue"],
-    "prev_y":   ["營業收入_去年當月營收","去年當月營收","LastYearRevenue"],
+    "month":    ["營業收入-當月營收", "營業收入_當月營收", "當月營收", "Revenue"],
+    "prev_m":   ["營業收入-上月營收", "營業收入_上月營收", "上月營收", "PreviousRevenue"],
+    "prev_y":   ["營業收入-去年當月營收", "營業收入_去年當月營收", "去年當月營收", "LastYearRevenue"],
     "ytd":      [
+        "累計營業收入-當月累計營收",
         "累計營業收入_當月累計營收",
         "累計營業收入_當月累計",
         "累計營業收入_本年累計",
         "當月累計營收", "當月累積營收", "AccumulatedRevenue",
     ],
     "prev_ytd": [
+        "累計營業收入-去年累計營收",
         "累計營業收入_去年累計營收",
         "累計營業收入_去年累計",
         "累計營業收入_去年同期",
@@ -194,14 +168,11 @@ def _parse_records(records: list[dict], label: str) -> dict[str, dict]:
             "revenue_prev_year_ytd":   rpyt,
         }
         if code == "9921":
-            print(f"  [debug] 9921 raw={dict(list(rec.items())[:8])}")
             print(f"  [debug] 9921 revenue_month={rm}  (expect ~5357327)")
         if code in WATCH_CODES:
             print(f"  [debug] FOUND watch code {code}: revenue_month={rm}")
     return result
 
-
-# ─── main fetchers ────────────────────────────────────────────────────────────
 
 def fetch_twse() -> dict[str, dict]:
     result = {}
@@ -212,9 +183,6 @@ def fetch_twse() -> dict[str, dict]:
             label = url.split("/")[-1]
             parsed = _parse_records(records, label)
             result.update(parsed)
-            found = [c for c in WATCH_CODES if c in parsed]
-            if found:
-                print(f"  [debug] watch codes found in {label}: {found}")
         except Exception as exc:
             print(f"  ✗ {url}: {exc}", file=sys.stderr)
     missing = [c for c in WATCH_CODES if c not in result]
@@ -234,9 +202,6 @@ def fetch_tpex() -> dict[str, dict]:
                 label = url.split("/")[-1]
                 parsed = _parse_records(records, label)
                 result.update(parsed)
-                found = [c for c in WATCH_CODES if c in parsed]
-                if found:
-                    print(f"  [debug] watch codes found in {label}: {found}")
         except Exception as exc:
             print(f"  ✗ {url}: {exc}", file=sys.stderr)
             last_exc = exc
@@ -247,8 +212,6 @@ def fetch_tpex() -> dict[str, dict]:
         print(f"  ✗ all TPEx endpoints failed: {last_exc}", file=sys.stderr)
     return result
 
-
-# ─── main ────────────────────────────────────────────────────────────────────
 
 def main():
     companies = load_companies()
