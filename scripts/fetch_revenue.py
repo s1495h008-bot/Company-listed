@@ -53,8 +53,7 @@ WATCH_CODES = {"8933", "6804", "4559", "8938", "5291"}
 
 # CORS proxies tried in order; None = direct (no proxy)
 PROXIES = [
-    "corsproxy",
-    "allorigins",
+    "cloudflare",
     None,
 ]
 
@@ -63,10 +62,8 @@ def _proxy_url(target: str, proxy: str | None) -> str:
     if proxy is None:
         return target
     enc = urllib.parse.quote(target, safe="")
-    if proxy == "corsproxy":
-        return f"https://corsproxy.io/?url={enc}"
-    if proxy == "allorigins":
-        return f"https://api.allorigins.win/raw?url={enc}"
+    if proxy == "cloudflare":
+        return f"https://silent-bonus-fc0a.s1495h008.workers.dev/?url={enc}"
     return target
 
 
