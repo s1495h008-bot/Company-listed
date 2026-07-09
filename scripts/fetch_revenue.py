@@ -71,7 +71,25 @@ def pct_change(cur, base):
     return round((cur - base) / abs(base) * 100, 2)
 
 
-def infer_report_month() -> str:
+def parse_ym(ym_raw: str) -> str | None:
+    """Convert ROC year-month like '11505' to '2026-05'."""
+    ym_raw = str(ym_raw).strip()
+    if len(ym_raw) >= 5:
+        try:
+            roc_year = int(ym_raw[:3])
+            month = int(ym_raw[3:5])
+            return f"{roc_year + 1911}-{month:02d}"
+        except ValueError:
+            pass
+    return None
+
+
+def infer_report_month(all_data: dict = None) -> str:
+    if all_data:
+        for rec in all_data.values():
+            ym = rec.get("data_ym")
+            if ym:
+                return ym
     now = datetime.now(TW_TZ)
     if now.month == 1:
         return f"{now.year - 1}-12"
@@ -145,9 +163,6 @@ def _parse_records(records: list[dict], label: str) -> dict[str, dict]:
         return {}
     sample = _normalize_keys(records[0])
     print(f"  [debug] {label} ALL keys: {list(sample.keys())}")
-    ytd_hit = next((k for k in FIELD_VARIANTS["ytd"] if k in sample), None)
-    prevytd_hit = next((k for k in FIELD_VARIANTS["prev_ytd"] if k in sample), None)
-    print(f"  [debug] ytd field matched: {ytd_hit!r}  prev_ytd matched: {prevytd_hit!r}")
 
     result: dict[str, dict] = {}
     for raw in records:
@@ -155,12 +170,15 @@ def _parse_records(records: list[dict], label: str) -> dict[str, dict]:
         code = (rec.get("公司代號") or rec.get("CompanyID") or "").strip()
         if not code:
             continue
+        ym_raw = rec.get("資料年月") or rec.get("DataYear") or ""
+        ym = parse_ym(ym_raw)
         rm   = safe_num(_pick(rec, FIELD_VARIANTS["month"]))
         rpm  = safe_num(_pick(rec, FIELD_VARIANTS["prev_m"]))
         rpy  = safe_num(_pick(rec, FIELD_VARIANTS["prev_y"]))
         ryt  = safe_num(_pick(rec, FIELD_VARIANTS["ytd"]))
         rpyt = safe_num(_pick(rec, FIELD_VARIANTS["prev_ytd"]))
         result[code] = {
+            "data_ym":                 ym,
             "revenue_month":           rm,
             "revenue_prev_month":      rpm,
             "revenue_prev_year_month": rpy,
@@ -168,7 +186,7 @@ def _parse_records(records: list[dict], label: str) -> dict[str, dict]:
             "revenue_prev_year_ytd":   rpyt,
         }
         if code == "9921":
-            print(f"  [debug] 9921 revenue_month={rm}  (expect ~5357327)")
+            print(f"  [debug] 9921 data_ym={ym} revenue_month={rm}")
         if code in WATCH_CODES:
             print(f"  [debug] FOUND watch code {code}: revenue_month={rm}")
     return result
@@ -193,7 +211,6 @@ def fetch_twse() -> dict[str, dict]:
 
 def fetch_tpex() -> dict[str, dict]:
     result = {}
-    last_exc = None
     for url in TPEX_URLS:
         print(f"Fetching via proxy → {url}")
         try:
@@ -204,12 +221,9 @@ def fetch_tpex() -> dict[str, dict]:
                 result.update(parsed)
         except Exception as exc:
             print(f"  ✗ {url}: {exc}", file=sys.stderr)
-            last_exc = exc
     missing = [c for c in WATCH_CODES if c not in result]
     if missing:
         print(f"  [debug] watch codes NOT in any TPEx endpoint: {missing}")
-    if not result:
-        print(f"  ✗ all TPEx endpoints failed: {last_exc}", file=sys.stderr)
     return result
 
 
@@ -248,6 +262,7 @@ def main():
         entry = {
             "code": code, "name_zh": company["name_zh"],
             "name_en": company["name_en"], "market": market,
+            "report_month":            rec.get("data_ym"),
             "revenue_month":           rm,
             "revenue_prev_month":      rpm,
             "revenue_prev_year_month": rpy,
@@ -263,7 +278,7 @@ def main():
     now_tw = datetime.now(TW_TZ)
     output = {
         "updated_at":   now_tw.isoformat(),
-        "report_month": infer_report_month(),
+        "report_month": infer_report_month(all_data),
         "companies":    results,
     }
 
