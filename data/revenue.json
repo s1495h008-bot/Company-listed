@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-13T15:39:06.121123+08:00",
+  "updated_at": "2026-10-14T14:02:55.582569+08:00",
   "report_month": "2026-09",
   "companies": [
     {
@@ -22,7 +22,15 @@
       "name_zh": "美利達",
       "name_en": "Merida",
       "market": "sii",
-      "error": "no_data"
+      "report_month": "2026-09",
+      "revenue_month": 1689798.0,
+      "revenue_prev_month": 1958658.0,
+      "revenue_prev_year_month": 2269282.0,
+      "revenue_ytd": 18459594.0,
+      "revenue_prev_year_ytd": 21806753.0,
+      "revenue_month_yoy": -25.54,
+      "revenue_month_mom": -13.73,
+      "revenue_ytd_yoy": -15.35
     },
     {
       "code": "8933",
@@ -58,7 +66,15 @@
       "name_zh": "桂盟",
       "name_en": "KMC",
       "market": "sii",
-      "error": "no_data"
+      "report_month": "2026-09",
+      "revenue_month": 458524.0,
+      "revenue_prev_month": 398423.0,
+      "revenue_prev_year_month": 368091.0,
+      "revenue_ytd": 4096695.0,
+      "revenue_prev_year_ytd": 3645428.0,
+      "revenue_month_yoy": 24.57,
+      "revenue_month_mom": 15.08,
+      "revenue_ytd_yoy": 12.38
     },
     {
       "code": "1526",
@@ -80,7 +96,15 @@
       "name_zh": "利奇",
       "name_en": "LeeChi",
       "market": "sii",
-      "error": "no_data"
+      "report_month": "2026-09",
+      "revenue_month": 170478.0,
+      "revenue_prev_month": 157625.0,
+      "revenue_prev_year_month": 179234.0,
+      "revenue_ytd": 1512557.0,
+      "revenue_prev_year_ytd": 1525141.0,
+      "revenue_month_yoy": -4.89,
+      "revenue_month_mom": 8.15,
+      "revenue_ytd_yoy": -0.83
     },
     {
       "code": "4536",
@@ -102,14 +126,30 @@
       "name_zh": "正新",
       "name_en": "Maxxis",
       "market": "sii",
-      "error": "no_data"
+      "report_month": "2026-09",
+      "revenue_month": 8962945.0,
+      "revenue_prev_month": 8338554.0,
+      "revenue_prev_year_month": 7965454.0,
+      "revenue_ytd": 74276255.0,
+      "revenue_prev_year_ytd": 69693221.0,
+      "revenue_month_yoy": 12.52,
+      "revenue_month_mom": 7.49,
+      "revenue_ytd_yoy": 6.58
     },
     {
       "code": "2106",
       "name_zh": "建大",
       "name_en": "Kenda",
       "market": "sii",
-      "error": "no_data"
+      "report_month": "2026-09",
+      "revenue_month": 3003422.0,
+      "revenue_prev_month": 2901482.0,
+      "revenue_prev_year_month": 2962527.0,
+      "revenue_ytd": 27350407.0,
+      "revenue_prev_year_ytd": 25960224.0,
+      "revenue_month_yoy": 1.38,
+      "revenue_month_mom": 3.51,
+      "revenue_ytd_yoy": 5.36
     },
     {
       "code": "4559",
