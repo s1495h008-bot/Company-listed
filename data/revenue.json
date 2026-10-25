@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-24T13:41:05.882029+08:00",
+  "updated_at": "2026-10-25T13:55:15.920547+08:00",
   "report_month": "2026-09",
   "companies": [
     {
@@ -156,15 +156,7 @@
       "name_zh": "久裕",
       "name_en": "JoyTech",
       "market": "otc",
-      "report_month": "2026-09",
-      "revenue_month": 115017.0,
-      "revenue_prev_month": 100758.0,
-      "revenue_prev_year_month": 92523.0,
-      "revenue_ytd": 1016747.0,
-      "revenue_prev_year_ytd": 729191.0,
-      "revenue_month_yoy": 24.31,
-      "revenue_month_mom": 14.15,
-      "revenue_ytd_yoy": 39.43
+      "error": "no_data"
     },
     {
       "code": "8938",
